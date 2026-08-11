@@ -508,9 +508,9 @@
   function waitFor(fn, timeout = 3000) {
     return new Promise((resolve) => {
       const start = Date.now()
-      const t = setInterval(() => {
+      const timer = setInterval(() => {
         if (fn() || Date.now() - start > timeout) {
-          clearInterval(t)
+          clearInterval(timer)
           resolve()
         }
       }, 80)
@@ -1135,7 +1135,7 @@
       }
       const a = map.get(k)
       a.requests++
-      for (const f of AGG_FIELDS.slice(1)) a[f] += r[f]
+      for (const f of AGG_FIELDS.slice(1)) a[f] += r[f] ?? 0
     }
     return [...map.values()].sort((a, b) => b.inputTokens + b.cacheReadTokens + b.outputTokens - (a.inputTokens + a.cacheReadTokens + a.outputTokens))
   }
@@ -1651,7 +1651,7 @@
   }
   async function setStatus(btn, text) {
     const info = $q("#oc-go-export-info")
-    const isProgress = text && (text === t("msgDomFallback") || text === t("msgAutoSync") || /…$/.test(text))
+    const isProgress = text && /…$/.test(text)
     if (info && text) info.textContent = text
     if (btn && text && !/…$/.test(text)) {
       // 进度/结果写入 info，按钮标签保持不变
@@ -1858,7 +1858,7 @@
     backdrop.addEventListener("click", () => {
       if (loadSettings().clickOutsideClose) closeDrawer()
     })
-    document.addEventListener("click", (e) => {
+    const onDocClick = (e) => {
       if (!root.classList.contains("oc-open")) return
       if (loadSettings().displayMode === "large") return
       if (!loadSettings().clickOutsideClose) return
@@ -1866,9 +1866,16 @@
       if (!document.body.contains(e.target)) return
       if (root.contains(e.target)) return
       closeDrawer()
-    })
-    document.addEventListener("keydown", (e) => {
+    }
+    const onDocKeydown = (e) => {
       if (e.key === "Escape" && root.classList.contains("oc-open")) closeDrawer()
+    }
+    document.addEventListener("click", onDocClick)
+    document.addEventListener("keydown", onDocKeydown)
+    // 语言切换重建时清理监听器，避免泄漏
+    root.addEventListener("oc-destroy", () => {
+      document.removeEventListener("click", onDocClick)
+      document.removeEventListener("keydown", onDocKeydown)
     })
 
     btnExpand.addEventListener("click", () => {
@@ -1918,7 +1925,10 @@
         settingsCache = null
         saveSettings({ lang: el.value })
         const oldRoot = document.getElementById("oc-go-export-root")
-        if (oldRoot) oldRoot.remove()
+        if (oldRoot) {
+          oldRoot.dispatchEvent(new CustomEvent("oc-destroy"))
+          oldRoot.remove()
+        }
         inject()
       })
     })
