@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go 用量导出 CSV
 // @namespace    opencode.go-usage-export
-// @version      5.8.0
+// @version      5.8.1
 // @run-at       document-start
 // @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出
 // @match        https://opencode.ai/workspace/*/usage
@@ -1518,7 +1518,7 @@
 #oc-go-export-root.oc-open #oc-go-export-toggle{background:#333;border-color:rgba(255,255,255,.2);font-size:18px;line-height:1}
 #oc-go-export-drawer{position:absolute;bottom:54px;right:0;width:min(340px,calc(100vw - 40px));background:#141414;border:1px solid rgba(255,255,255,.12);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);overflow:hidden;opacity:0;pointer-events:none;transform:translateY(8px) scale(.98);transform-origin:bottom right;transition:opacity .18s,transform .18s}
 #oc-go-export-root.oc-mode-compact.oc-open #oc-go-export-drawer{opacity:1;pointer-events:auto;transform:none;max-height:min(88vh,680px);display:flex;flex-direction:column}
-#oc-go-export-root.oc-mode-large #oc-go-export-drawer{position:fixed;top:50%;left:50%;bottom:auto;right:auto;width:min(720px,calc(100vw - 24px));max-height:90vh;transform:translate(-50%,-50%) scale(.98);transform-origin:center;z-index:9001}
+#oc-go-export-root.oc-mode-large #oc-go-export-drawer{position:fixed;top:50%;left:50%;bottom:auto;right:auto;width:min(780px,calc(100vw - 24px));max-height:90vh;transform:translate(-50%,-50%) scale(.98);transform-origin:center;z-index:9001}
 #oc-go-export-root.oc-mode-large.oc-open #oc-go-export-drawer{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);display:flex;flex-direction:column}
 #oc-go-export-root.oc-busy #oc-go-export-info{color:#e84c3d}
 .oc-drawer-head{flex-shrink:0}
@@ -1535,13 +1535,13 @@
 .oc-export-inner{padding-bottom:10px}
 .oc-export-title{display:none}
 .oc-export-presets{display:flex;gap:4px;margin-bottom:6px}
-.oc-export-presets button{flex:1;padding:4px 0;font-size:10px;color:#ccc;background:#222;border:1px solid rgba(255,255,255,.08);border-radius:5px;cursor:pointer;font-family:inherit}
+.oc-export-presets button{flex:1;padding:4px 0;font-size:10px;color:#ccc;background:#222;border:1px solid rgba(255,255,255,.08);border-radius:5px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .oc-export-presets button.oc-active{color:#fff;background:#333;border-color:rgba(232,76,61,.5)}
 .oc-export-dates{display:flex;align-items:center;gap:4px;margin-bottom:6px}
 .oc-export-dates input{flex:1;min-width:0;padding:4px 6px;font-size:10px;color:#eee;background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:5px;font-family:inherit}
 .oc-export-dates span{color:#666;font-size:10px}
 .oc-export-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.oc-export-actions button{padding:6px 8px;font-size:11px;font-weight:600;color:#fff;background:#2a2a2a;border:1px solid rgba(255,255,255,.08);border-radius:6px;cursor:pointer;font-family:inherit}
+.oc-export-actions button{padding:6px 8px;font-size:11px;font-weight:600;color:#fff;background:#2a2a2a;border:1px solid rgba(255,255,255,.08);border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .oc-export-actions button:hover{background:#363636}
 .oc-export-actions button.oc-primary{background:#e84c3d;border-color:transparent}
 .oc-export-actions button.oc-primary:hover{background:#d44335}
@@ -1570,7 +1570,9 @@
 .oc-settings-label::after{content:"";flex:5;height:1px;background:rgba(255,255,255,.06)}
 .oc-settings-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;font-size:11.5px;color:#d0d0d0}
 .oc-settings-row+.oc-settings-row{border-top:1px solid rgba(255,255,255,.04)}
-.oc-settings-row span{flex:1;min-width:0}
+.oc-settings-row>span{flex:1;min-width:0;line-height:1.35}
+.oc-settings-row:has(.oc-settings-radios){flex-direction:column;align-items:stretch;gap:6px}
+.oc-settings-row:has(.oc-settings-radios)>span{flex:none;white-space:nowrap}
 .oc-settings-radios{display:flex;gap:3px;flex-wrap:wrap}
 .oc-settings-radios label{display:flex;align-items:center;gap:0;font-size:10.5px;color:#aaa;cursor:pointer;padding:4px 9px;background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:6px;transition:background .1s,color .1s,border-color .1s;white-space:nowrap}
 .oc-settings-radios label:hover{background:rgba(255,255,255,.09);color:#ddd}
@@ -1599,9 +1601,10 @@
 .oc-mode-large .oc-dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 .oc-mode-large .oc-dim-grid .oc-empty{grid-column:1/-1}
 .oc-mode-large .oc-actions{grid-template-columns:1fr 1fr}
+.oc-mode-large .oc-actions button{padding:7px 8px;font-size:11px}
 /* 大窗口两栏布局：sidebar 左 + body 右 */
 .oc-mode-large #oc-go-export-body-wrap{flex-direction:row}
-.oc-mode-large #oc-go-export-sidebar{width:236px;min-width:180px;border-right:1px solid rgba(255,255,255,.08);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+.oc-mode-large #oc-go-export-sidebar{width:260px;min-width:220px;border-right:1px solid rgba(255,255,255,.08);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
 .oc-mode-large #oc-go-export-sidebar::-webkit-scrollbar{width:4px}
 .oc-mode-large #oc-go-export-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:99px}
 /* 大窗口下 export-block 无需上下边框（已在 sidebar 内） */
@@ -1609,7 +1612,7 @@
 /* 大窗口下 body 左侧加 padding */
 .oc-mode-large #oc-go-export-body{padding-left:4px}
 .oc-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px 8px}
-.oc-actions button{padding:8px 10px;font-size:12px;font-weight:600;color:#fff;background:#2a2a2a;border:1px solid rgba(255,255,255,.08);border-radius:7px;cursor:pointer;font-family:inherit;transition:background .12s}
+.oc-actions button{padding:8px 10px;font-size:12px;font-weight:600;color:#fff;background:#2a2a2a;border:1px solid rgba(255,255,255,.08);border-radius:7px;cursor:pointer;font-family:inherit;transition:background .12s;white-space:nowrap}
 .oc-actions button.oc-danger{color:#f88;background:#2a1818;border-color:rgba(232,76,61,.25)}
 .oc-actions button.oc-danger:hover:not(:disabled){background:#3a2020}
 .oc-actions button.oc-danger-confirm{color:#fff;background:#e84c3d;border-color:#e84c3d;animation:oc-pulse-danger 1.5s infinite}
@@ -1658,7 +1661,7 @@
 .oc-plan-key{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .oc-plan-meta{display:flex;gap:8px;flex-shrink:0;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
 .oc-panel-foot{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:#555}
-@media(max-width:640px){#oc-go-export-root{bottom:14px;right:14px}#oc-go-export-root.oc-mode-compact #oc-go-export-drawer{width:min(300px,calc(100vw - 28px))}#oc-go-export-root.oc-mode-large #oc-go-export-drawer{width:min(720px,calc(100vw - 24px))}.oc-mode-large .oc-stat-grid{grid-template-columns:1fr 1fr}.oc-mode-large .oc-dim-grid{grid-template-columns:1fr}}`
+@media(max-width:640px){#oc-go-export-root{bottom:14px;right:14px}#oc-go-export-root.oc-mode-compact #oc-go-export-drawer{width:min(300px,calc(100vw - 28px))}#oc-go-export-root.oc-mode-large #oc-go-export-drawer{width:min(780px,calc(100vw - 24px))}.oc-mode-large .oc-stat-grid{grid-template-columns:1fr 1fr}.oc-mode-large .oc-dim-grid{grid-template-columns:1fr}}`
   }
 
   function setDrawerOpen(open) {
