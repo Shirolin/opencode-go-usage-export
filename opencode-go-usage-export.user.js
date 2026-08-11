@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go 用量导出 CSV
 // @namespace    opencode.go-usage-export
-// @version      5.7.0
+// @version      5.8.0
 // @run-at       document-start
 // @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出
 // @match        https://opencode.ai/workspace/*/usage
@@ -53,6 +53,7 @@
       btnRefresh: "刷新面板",
       btnNames: "更新 key 名称",
       btnClear: "清空缓存",
+      btnClearConfirm: "确认清空？（点击确认）",
       // settings
       settingsTitle: "设置",
       settingGroupDisplay: "显示",
@@ -144,6 +145,7 @@
       btnRefresh: "Refresh",
       btnNames: "Refresh key names",
       btnClear: "Clear data",
+      btnClearConfirm: "Confirm clear? (click again)",
       settingsTitle: "Settings",
       settingGroupDisplay: "Appearance",
       settingGroupSync: "Sync",
@@ -230,6 +232,7 @@
       btnRefresh: "再読み込み",
       btnNames: "Key名を再取得",
       btnClear: "データ削除",
+      btnClearConfirm: "本当に削除？（もう一度クリック）",
       settingsTitle: "設定",
       settingGroupDisplay: "表示",
       settingGroupSync: "同期",
@@ -316,6 +319,7 @@
       btnRefresh: "重新整理",
       btnNames: "更新 Key 名稱",
       btnClear: "清除資料",
+      btnClearConfirm: "確認清除？（再次點擊）",
       settingsTitle: "設定",
       settingGroupDisplay: "外觀",
       settingGroupSync: "同步",
@@ -1517,7 +1521,10 @@
 #oc-go-export-root.oc-mode-large #oc-go-export-drawer{position:fixed;top:50%;left:50%;bottom:auto;right:auto;width:min(720px,calc(100vw - 24px));max-height:90vh;transform:translate(-50%,-50%) scale(.98);transform-origin:center;z-index:9001}
 #oc-go-export-root.oc-mode-large.oc-open #oc-go-export-drawer{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);display:flex;flex-direction:column}
 #oc-go-export-root.oc-busy #oc-go-export-info{color:#e84c3d}
-.oc-drawer-head,.oc-actions,#oc-go-export-info,.oc-export-block,.oc-settings-block{flex-shrink:0}
+.oc-drawer-head{flex-shrink:0}
+#oc-go-export-body-wrap{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#oc-go-export-sidebar{display:flex;flex-direction:column;flex-shrink:0}
+.oc-actions,#oc-go-export-info,.oc-export-block,.oc-settings-block{flex-shrink:0}
 #oc-go-export-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) rgba(255,255,255,.06)}
 #oc-go-export-body::-webkit-scrollbar{width:6px}
 #oc-go-export-body::-webkit-scrollbar-track{background:rgba(255,255,255,.06);border-radius:99px;margin:4px 0}
@@ -1591,11 +1598,22 @@
 .oc-dim-grid{display:block}
 .oc-mode-large .oc-dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 .oc-mode-large .oc-dim-grid .oc-empty{grid-column:1/-1}
-.oc-mode-large .oc-actions{grid-template-columns:repeat(3,1fr)}
+.oc-mode-large .oc-actions{grid-template-columns:1fr 1fr}
+/* 大窗口两栏布局：sidebar 左 + body 右 */
+.oc-mode-large #oc-go-export-body-wrap{flex-direction:row}
+.oc-mode-large #oc-go-export-sidebar{width:236px;min-width:180px;border-right:1px solid rgba(255,255,255,.08);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+.oc-mode-large #oc-go-export-sidebar::-webkit-scrollbar{width:4px}
+.oc-mode-large #oc-go-export-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:99px}
+/* 大窗口下 export-block 无需上下边框（已在 sidebar 内） */
+.oc-mode-large .oc-export-block{border-left:none;border-right:none}
+/* 大窗口下 body 左侧加 padding */
+.oc-mode-large #oc-go-export-body{padding-left:4px}
 .oc-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px 8px}
 .oc-actions button{padding:8px 10px;font-size:12px;font-weight:600;color:#fff;background:#2a2a2a;border:1px solid rgba(255,255,255,.08);border-radius:7px;cursor:pointer;font-family:inherit;transition:background .12s}
 .oc-actions button.oc-danger{color:#f88;background:#2a1818;border-color:rgba(232,76,61,.25)}
 .oc-actions button.oc-danger:hover:not(:disabled){background:#3a2020}
+.oc-actions button.oc-danger-confirm{color:#fff;background:#e84c3d;border-color:#e84c3d;animation:oc-pulse-danger 1.5s infinite}
+@keyframes oc-pulse-danger{0%,100%{box-shadow:0 0 0 0 rgba(232,76,61,.4)}50%{box-shadow:0 0 0 4px rgba(232,76,61,0)}}
 .oc-actions .oc-span2{grid-column:1/-1}
 .oc-actions button:hover:not(:disabled){background:#363636}
 .oc-actions button:disabled{opacity:.45;cursor:not-allowed}
@@ -1847,7 +1865,15 @@
     panel.id = "oc-go-export-panel"
     body.appendChild(panel)
 
-    drawer.append(head, settingsBlock, actions, info, exportBlock, body)
+    const sidebar = document.createElement("div")
+    sidebar.id = "oc-go-export-sidebar"
+    sidebar.append(settingsBlock, actions, info, exportBlock)
+
+    const bodyWrap = document.createElement("div")
+    bodyWrap.id = "oc-go-export-body-wrap"
+    bodyWrap.append(sidebar, body)
+
+    drawer.append(head, bodyWrap)
     root.append(backdrop, drawer, toggle)
     document.body.appendChild(root)
 
@@ -1972,11 +1998,28 @@
     btnFull.addEventListener("click", guard(() => run("full", btnFull)))
     btnInc.addEventListener("click", guard(() => run("incremental", btnInc)))
     btnRefresh.addEventListener("click", guard(async () => setStatus(null, t("msgRefreshed"))))
-    btnClear.addEventListener("click", guard(async () => {
-      await idbDelete(WS_ID)
-      setStatus(null, t("msgCleared"))
-      syncSettingsUI()
-    }))
+    let clearConfirmTimer = null
+    btnClear.addEventListener("click", () => {
+      if (clearConfirmTimer) {
+        clearTimeout(clearConfirmTimer)
+        clearConfirmTimer = null
+        btnClear.textContent = t("btnClear")
+        btnClear.classList.remove("oc-danger-confirm")
+        guard(async () => {
+          await idbDelete(WS_ID)
+          setStatus(null, t("msgCleared"))
+          syncSettingsUI()
+        })()
+      } else {
+        btnClear.textContent = t("btnClearConfirm")
+        btnClear.classList.add("oc-danger-confirm")
+        clearConfirmTimer = setTimeout(() => {
+          clearConfirmTimer = null
+          btnClear.textContent = t("btnClear")
+          btnClear.classList.remove("oc-danger-confirm")
+        }, 3000)
+      }
+    })
     btnNames.addEventListener("click", guard(() => refreshApiKeyNames()))
 
     exportBlock.querySelectorAll(".oc-export-presets button").forEach((b) => {
