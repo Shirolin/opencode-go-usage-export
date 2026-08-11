@@ -1199,7 +1199,10 @@
     const a = document.createElement("a")
     a.href = URL.createObjectURL(blob)
     a.download = name
+    a.style.display = "none"
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
   function exportXLSX(detail, summary, tag = "", keyNames = {}) {
@@ -1859,6 +1862,8 @@
       if (!root.classList.contains("oc-open")) return
       if (loadSettings().displayMode === "large") return
       if (!loadSettings().clickOutsideClose) return
+      // 忽略游离节点（如下载用的临时 <a>）触发的点击
+      if (!document.body.contains(e.target)) return
       if (root.contains(e.target)) return
       closeDrawer()
     })
@@ -1907,6 +1912,9 @@
     $qa('input[name="oc-lang"]').forEach((el) => {
       el.addEventListener("change", () => {
         if (!el.checked) return
+        // 保存面板开关状态，inject() 会重新读取
+        const wasOpen = root.classList.contains("oc-open")
+        setPanelOpen(wasOpen)
         settingsCache = null
         saveSettings({ lang: el.value })
         const oldRoot = document.getElementById("oc-go-export-root")
