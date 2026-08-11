@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go 用量导出 CSV
 // @namespace    opencode.go-usage-export
-// @version      5.6.0
+// @version      5.7.0
 // @run-at       document-start
 // @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出
 // @match        https://opencode.ai/workspace/*/usage
@@ -34,6 +34,288 @@
     pageGapMs: 350,
     topKeyCount: 5,
     topModelCount: 6,
+    lang: "",
+  }
+
+  const LOCALES = {
+    zh: {
+      // panel / head
+      panelTitle: "Go 用量导出",
+      toggleOpen: "展开 Go 用量导出",
+      toggleClose: "收起面板",
+      btnExpandCompact: "切换紧凑模式",
+      btnExpandLarge: "切换大窗口",
+      btnSettings: "设置",
+      btnClose: "收起",
+      // action buttons
+      btnFull: "全量抓取",
+      btnInc: "增量抓取",
+      btnRefresh: "刷新面板",
+      btnNames: "更新 key 名称",
+      btnClear: "清空缓存",
+      // settings
+      settingsTitle: "设置",
+      settingGroupDisplay: "显示",
+      settingGroupSync: "同步",
+      settingGroupExport: "导出",
+      settingGroupPanel: "面板",
+      settingGroupAdvanced: "高级选项",
+      settingDisplayMode: "显示模式",
+      settingDisplayCompact: "紧凑",
+      settingDisplayLarge: "大窗口",
+      settingClickOutside: "点击外部关闭",
+      settingAutoSync: "自动同步",
+      settingAutoSyncNote: "（>6h 增量）",
+      settingExportPreset: "默认日期区间",
+      settingExportOpen: "导出区默认展开",
+      settingOverviewOpen: "概览默认展开",
+      settingDimensionsOpen: "维度分析默认展开",
+      settingPageGap: "拉页间隔",
+      settingTopModel: "模型排行数",
+      settingTopKey: "Key 排行数",
+      settingLang: "语言",
+      settingLangAuto: "自动",
+      // export block
+      exportTitle: "导出数据",
+      exportPreset7: "近7天",
+      exportPreset30: "近30天",
+      exportPresetAll: "全部",
+      exportCsv: "导出 CSV",
+      exportExcel: "导出 Excel",
+      // stats / overview
+      statOverview: "概览",
+      statWindowLabel: "统计窗口",
+      statRangeLabel: "数据范围",
+      statWindow30d: "近 30 天明细",
+      statTotalRequests: "共 {0} 次请求",
+      statCost30d: "成本(近30天)",
+      statQuotaTitle: "Go 限额（近 30 天明细）",
+      statQuota5h: "5 小时",
+      statQuota7d: "7 天",
+      statQuota30d: "30 天",
+      statFootDetail: "明细 {0} 条 + 汇总 {1} 组",
+      statFootKeys: "已命名 key {0} 个",
+      statEmptyDim: "暂无维度数据，请先抓取",
+      statEmptyDetail: "暂无明细",
+      statSummaryGroups: "汇总 {0} 组",
+      dimByModel: "按模型 · {0}",
+      dimByKey: "按 API key · {0}",
+      dimByPlan: "按 plan · {0}",
+      unitTok: " tok",
+      unitReqs: " 次",
+      unitReqsPlain: "次",
+      // key labels
+      keyUnknown: "未标识(dom)",
+      dateUnknown: "未知",
+      // status / info messages
+      msgReady: "就绪",
+      msgRefreshed: "已刷新",
+      msgCleared: "已清空",
+      msgAutoSync: "自动增量同步中…",
+      msgFetchProgressInc: "增量抓取中… 已拉 {0} 条",
+      msgFetchProgressFull: "全量抓取中… 已拉 {0} 条",
+      msgDomFallback: "网络捕获失败，改用页面抓取（较慢）…",
+      msgDomProgress: "页面抓取中… {0} 条",
+      msgDoneInc: "增量完成：{0} 源 · 新增 {1} 条 · 明细 {2} / 汇总 {3}",
+      msgDoneFull: "全量完成：{0} 源 · 新增 {1} 条 · 明细 {2} / 汇总 {3}",
+      msgDedup: " · 去重 {0} 条",
+      msgInfoBar: "明细 {0} / 汇总 {1} 组 · 上次同步：{2}",
+      msgLastSync: "上次同步: {0}",
+      msgNoKeys: "暂无带 keyID 的数据，请先抓取 network 明细",
+      msgKeyRefreshing: "更新 API key 名称中…",
+      msgKeyRefreshed: "已更新 {0} 个 API key 名称",
+      msgExportEmpty: "所选区间无数据",
+      msgNoSheetjs: "SheetJS 未加载，请用 CSV",
+      msgExportDone: "已导出：明细 {0} 条 · 汇总 {1} 组 · {2} ~ {3}",
+      msgError: "出错: {0}",
+      msgNone: "无",
+    },
+    en: {
+      panelTitle: "Go Usage Export",
+      toggleOpen: "Open Go Usage Export",
+      toggleClose: "Collapse panel",
+      btnExpandCompact: "Switch to compact",
+      btnExpandLarge: "Switch to large window",
+      btnSettings: "Settings",
+      btnClose: "Close",
+      btnFull: "Full Fetch",
+      btnInc: "Incremental",
+      btnRefresh: "Refresh",
+      btnNames: "Update Key Names",
+      btnClear: "Clear Cache",
+      settingsTitle: "Settings",
+      settingGroupDisplay: "Display",
+      settingGroupSync: "Sync",
+      settingGroupExport: "Export",
+      settingGroupPanel: "Panel",
+      settingGroupAdvanced: "Advanced",
+      settingDisplayMode: "Display mode",
+      settingDisplayCompact: "Compact",
+      settingDisplayLarge: "Large",
+      settingClickOutside: "Click outside to close",
+      settingAutoSync: "Auto sync",
+      settingAutoSyncNote: "(>6h incremental)",
+      settingExportPreset: "Default date range",
+      settingExportOpen: "Expand export by default",
+      settingOverviewOpen: "Expand overview by default",
+      settingDimensionsOpen: "Expand dimensions by default",
+      settingPageGap: "Page interval",
+      settingTopModel: "Top models",
+      settingTopKey: "Top keys",
+      settingLang: "Language",
+      settingLangAuto: "Auto",
+      exportTitle: "Export Data",
+      exportPreset7: "Last 7d",
+      exportPreset30: "Last 30d",
+      exportPresetAll: "All",
+      exportCsv: "Export CSV",
+      exportExcel: "Export Excel",
+      statOverview: "Overview",
+      statWindowLabel: "Window",
+      statRangeLabel: "Range",
+      statWindow30d: "Last 30d detail",
+      statTotalRequests: "{0} requests total",
+      statCost30d: "Cost (30d)",
+      statQuotaTitle: "Go Quota (last 30d)",
+      statQuota5h: "5 hours",
+      statQuota7d: "7 days",
+      statQuota30d: "30 days",
+      statFootDetail: "{0} detail + {1} summary groups",
+      statFootKeys: "{0} named keys",
+      statEmptyDim: "No dimension data yet, run a fetch first",
+      statEmptyDetail: "No detail",
+      statSummaryGroups: "{0} summary groups",
+      dimByModel: "By model · {0}",
+      dimByKey: "By API key · {0}",
+      dimByPlan: "By plan · {0}",
+      unitTok: " tok",
+      unitReqs: " reqs",
+      unitReqsPlain: "reqs",
+      keyUnknown: "unidentified(dom)",
+      dateUnknown: "unknown",
+      msgReady: "Ready",
+      msgRefreshed: "Refreshed",
+      msgCleared: "Cleared",
+      msgAutoSync: "Auto incremental sync…",
+      msgFetchProgressInc: "Incremental fetch… {0} rows",
+      msgFetchProgressFull: "Full fetch… {0} rows",
+      msgDomFallback: "Network capture failed, falling back to DOM scrape (slow)…",
+      msgDomProgress: "DOM scraping… {0} rows",
+      msgDoneInc: "Incremental done: {0} source · +{1} rows · detail {2} / summary {3}",
+      msgDoneFull: "Full fetch done: {0} source · +{1} rows · detail {2} / summary {3}",
+      msgDedup: " · dedup {0}",
+      msgInfoBar: "Detail {0} / Summary {1} · Last sync: {2}",
+      msgLastSync: "Last sync: {0}",
+      msgNoKeys: "No keyID data found, run a network fetch first",
+      msgKeyRefreshing: "Updating API key names…",
+      msgKeyRefreshed: "Updated {0} API key name(s)",
+      msgExportEmpty: "No data in selected range",
+      msgNoSheetjs: "SheetJS not loaded, use CSV",
+      msgExportDone: "Exported: {0} detail · {1} summary · {2} ~ {3}",
+      msgError: "Error: {0}",
+      msgNone: "None",
+    },
+    ja: {
+      panelTitle: "Go 使用量エクスポート",
+      toggleOpen: "Go 使用量エクスポートを開く",
+      toggleClose: "パネルを閉じる",
+      btnExpandCompact: "コンパクトに切替",
+      btnExpandLarge: "大きいウィンドウに切替",
+      btnSettings: "設定",
+      btnClose: "閉じる",
+      btnFull: "フル取得",
+      btnInc: "差分取得",
+      btnRefresh: "更新",
+      btnNames: "Key名を更新",
+      btnClear: "キャッシュ削除",
+      settingsTitle: "設定",
+      settingGroupDisplay: "表示",
+      settingGroupSync: "同期",
+      settingGroupExport: "エクスポート",
+      settingGroupPanel: "パネル",
+      settingGroupAdvanced: "詳細設定",
+      settingDisplayMode: "表示モード",
+      settingDisplayCompact: "コンパクト",
+      settingDisplayLarge: "大窓",
+      settingClickOutside: "外クリックで閉じる",
+      settingAutoSync: "自動同期",
+      settingAutoSyncNote: "（>6h 差分）",
+      settingExportPreset: "既定の日付範囲",
+      settingExportOpen: "エクスポート欄をデフォルト展開",
+      settingOverviewOpen: "概要をデフォルト展開",
+      settingDimensionsOpen: "ディメンション分析をデフォルト展開",
+      settingPageGap: "ページ間隔",
+      settingTopModel: "上位モデル数",
+      settingTopKey: "上位Key数",
+      settingLang: "言語",
+      settingLangAuto: "自動",
+      exportTitle: "データエクスポート",
+      exportPreset7: "直近7日",
+      exportPreset30: "直近30日",
+      exportPresetAll: "全期間",
+      exportCsv: "CSV出力",
+      exportExcel: "Excel出力",
+      statOverview: "概要",
+      statWindowLabel: "集計窓",
+      statRangeLabel: "データ範囲",
+      statWindow30d: "直近30日明細",
+      statTotalRequests: "合計 {0} リクエスト",
+      statCost30d: "コスト(30日)",
+      statQuotaTitle: "Go 制限（直近30日明細）",
+      statQuota5h: "5時間",
+      statQuota7d: "7日",
+      statQuota30d: "30日",
+      statFootDetail: "明細 {0} 件 + 集計 {1} グループ",
+      statFootKeys: "名前付きKey {0} 個",
+      statEmptyDim: "ディメンションデータなし。まず取得してください",
+      statEmptyDetail: "明細なし",
+      statSummaryGroups: "集計 {0} グループ",
+      dimByModel: "モデル別 · {0}",
+      dimByKey: "API key別 · {0}",
+      dimByPlan: "プラン別 · {0}",
+      unitTok: " tok",
+      unitReqs: " 回",
+      unitReqsPlain: "回",
+      keyUnknown: "未識別(dom)",
+      dateUnknown: "不明",
+      msgReady: "準備完了",
+      msgRefreshed: "更新しました",
+      msgCleared: "削除しました",
+      msgAutoSync: "自動差分同期中…",
+      msgFetchProgressInc: "差分取得中… {0} 件取得",
+      msgFetchProgressFull: "フル取得中… {0} 件取得",
+      msgDomFallback: "ネットワーク取得失敗。DOM取得に切替（低速）…",
+      msgDomProgress: "DOM取得中… {0} 件",
+      msgDoneInc: "差分完了: {0}ソース · +{1}件 · 明細{2} / 集計{3}",
+      msgDoneFull: "フル完了: {0}ソース · +{1}件 · 明細{2} / 集計{3}",
+      msgDedup: " · 重複除去 {0} 件",
+      msgInfoBar: "明細 {0} / 集計 {1} グループ · 最終同期: {2}",
+      msgLastSync: "最終同期: {0}",
+      msgNoKeys: "keyIDデータなし。先にnetwork取得してください",
+      msgKeyRefreshing: "API key名を更新中…",
+      msgKeyRefreshed: "{0} 件のAPI key名を更新しました",
+      msgExportEmpty: "選択範囲にデータなし",
+      msgNoSheetjs: "SheetJSが読み込まれていません。CSVを使用してください",
+      msgExportDone: "エクスポート完了: 明細{0}件 · 集計{1}グループ · {2} ~ {3}",
+      msgError: "エラー: {0}",
+      msgNone: "なし",
+    },
+  }
+
+  function detectLang() {
+    const saved = loadSettings().lang
+    if (saved && LOCALES[saved]) return saved
+    const nav = (navigator.language || "").toLowerCase()
+    if (nav.startsWith("zh")) return "zh"
+    if (nav.startsWith("ja")) return "ja"
+    return "en"
+  }
+
+  function t(key, ...args) {
+    const dict = LOCALES[detectLang()] || LOCALES.zh
+    let s = dict[key] ?? LOCALES.zh[key] ?? key
+    args.forEach((v, i) => { s = s.replaceAll(`{${i}}`, String(v)) })
+    return s
   }
   const API_KEYS_SERVER_ID = "c22cd964237ba79f2f9b95faa2a14b804f870d1bab49279463379cc6a0fd0c85"
   const API_KEYS_SERVER_INSTANCE = "server-fn:4"
@@ -96,7 +378,7 @@
     if (backdrop) backdrop.hidden = m !== "large" || !root.classList.contains("oc-open")
     if (btnExpand) {
       btnExpand.textContent = m === "large" ? "⤡" : "⤢"
-      btnExpand.title = m === "large" ? "切换紧凑模式" : "切换大窗口"
+      btnExpand.title = m === "large" ? t("btnExpandCompact") : t("btnExpandLarge")
     }
     syncSettingsUI()
   }
@@ -114,6 +396,7 @@
       if (el) el.checked = true
     }
     setRadio("oc-display-mode", s.displayMode)
+    setRadio("oc-lang", s.lang || "")
     setVal("#oc-set-click-outside", s.clickOutsideClose)
     setVal("#oc-set-auto-sync", s.autoSync)
     setRadio("oc-export-preset", String(s.exportPresetDays))
@@ -127,8 +410,8 @@
     if (meta) {
       getWorkspaceData()
         .then((ws) => {
-          const last = ws.lastSync ? new Date(ws.lastSync).toLocaleString() : "无"
-          meta.textContent = `Workspace: ${WS_ID} · 上次同步: ${last}`
+          const last = ws.lastSync ? new Date(ws.lastSync).toLocaleString() : t("msgNone")
+          meta.textContent = `Workspace: ${WS_ID} · ${t("msgLastSync", last)}`
         })
         .catch(() => {
           meta.textContent = `Workspace: ${WS_ID}`
@@ -442,7 +725,7 @@
   }
 
   function keyLabel(keyID, plan = "", keyNames = {}) {
-    if (!keyID) return "未标识(dom)"
+    if (!keyID) return t("keyUnknown")
     const name = keyDisplayName(keyID, keyNames)
     const suffix = keyID.slice(-6)
     const base = name ? `${name} · ${suffix}` : suffix
@@ -507,15 +790,15 @@
     const wsData = await getWorkspaceData()
     const knownIDs = collectKnownKeyIDs(wsData.detail, wsData.summary)
     if (!knownIDs.length) {
-      setStatus(null, "暂无带 keyID 的数据，请先抓取 network 明细")
+      setStatus(null, t("msgNoKeys"))
       return
     }
-    setStatus(null, "更新 API key 名称中…")
+    setStatus(null, t("msgKeyRefreshing"))
     const names = await fetchApiKeyNames(knownIDs)
     const next = { ...wsData, keyNames: { ...(wsData.keyNames || {}), ...names }, lastKeySync: Date.now(), lastAccess: Date.now() }
     await saveWorkspaceData(next)
     renderPanel(next.detail, next.summary, next.keyNames)
-    setStatus(null, `已更新 ${Object.keys(names).length} 个 API key 名称`)
+    setStatus(null, t("msgKeyRefreshed", Object.keys(names).length))
   }
 
   let fetchGate = Promise.resolve()
@@ -728,7 +1011,7 @@
 
   // ---------- 聚合 / 分层 ----------
   const keyOf = (r) => (r.timeCreated ? `t:${r.timeCreated}:${r.sessionID || ""}` : domKey(r))
-  const dateKey = (r) => (r.timeCreated ? new Date(r.timeCreated).toISOString().slice(0, 10) : "未知")
+  const dateKey = (r) => (r.timeCreated ? new Date(r.timeCreated).toISOString().slice(0, 10) : t("dateUnknown"))
   const summaryKey = (r) => `${dateKey(r)}|${r.model || ""}|${r.plan || ""}|${r.keyID || ""}`
 
   // 明细 → 汇总（超过窗口的折叠进 summary）
@@ -899,14 +1182,14 @@
     const keyNames = wsData.keyNames || {}
     const { detail, summary } = filterByRange(wsData.detail, wsData.summary || [], fromMs, toMs)
     if (!detail.length && !summary.length) {
-      setStatus(null, "所选区间无数据")
+      setStatus(null, t("msgExportEmpty"))
       return
     }
     const tag = exportTag(fromVal, toVal)
     const ts = new Date().toISOString().slice(0, 10)
     if (format === "xlsx") {
       if (!exportXLSX(detail, summary, tag, keyNames)) {
-        setStatus(null, "SheetJS 未加载，请用 CSV")
+        setStatus(null, t("msgNoSheetjs"))
         return
       }
     } else {
@@ -917,7 +1200,7 @@
       download(`go-usage-by-key${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), AGG_COLS))
       download(`go-usage-by-plan${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go"), AGG_COLS))
     }
-    setStatus(null, `已导出：明细 ${detail.length} 条 · 汇总 ${summary.length} 组 · ${fromVal || "…"} ~ ${toVal || "…"}`)
+    setStatus(null, t("msgExportDone", detail.length, summary.length, fromVal || "…", toVal || "…"))
   }
 
   function setExportRange(days) {
@@ -953,11 +1236,11 @@
 
     if (fetchAll) {
       source = "network"
-      rows = await fetchAll((n) => setStatus(btn, `${mode === "incremental" ? "增量" : "全量"}抓取中… 已拉 ${n} 条`))
+      rows = await fetchAll((n) => setStatus(btn, t(mode === "incremental" ? "msgFetchProgressInc" : "msgFetchProgressFull", n)))
     } else {
       source = "dom"
-      setStatus(btn, "网络捕获失败，改用页面抓取（较慢）…")
-      rows = await domScrapeAll((n) => setStatus(btn, `页面抓取中… ${n} 条`))
+      setStatus(btn, t("msgDomFallback"))
+      rows = await domScrapeAll((n) => setStatus(btn, t("msgDomProgress", n)))
     }
 
     let added = 0
@@ -983,8 +1266,8 @@
 
     setStatus(
       btn,
-      `${mode === "incremental" ? "增量" : "全量"}完成：${source} 源 · 新增 ${added} 条 · 明细 ${detail.length} / 汇总 ${summary.length}` +
-        (dupTotal > 0 ? ` · 去重 ${dupTotal} 条` : ""),
+      t(mode === "incremental" ? "msgDoneInc" : "msgDoneFull", source, added, detail.length, summary.length) +
+        (dupTotal > 0 ? t("msgDedup", dupTotal) : ""),
     )
   }
 
@@ -1055,60 +1338,60 @@
     if (byModel.length) {
       const maxTok = byModel[0].inputTokens + byModel[0].cacheReadTokens + byModel[0].outputTokens
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
-        <summary>按模型 · ${byModel.length}</summary>
-        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.inputTokens + m.cacheReadTokens + m.outputTokens, maxTok, m.costUSD, " tok")).join("")}</div>
+        <summary>${t("dimByModel", byModel.length)}</summary>
+        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.inputTokens + m.cacheReadTokens + m.outputTokens, maxTok, m.costUSD, t("unitTok"))).join("")}</div>
       </details>`)
     }
     if (byKey.length) {
       const keyMax = Math.max(...byKey.map((m) => m.requests))
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
-        <summary>按 API key · ${byKey.length}</summary>
-        <div class="oc-fold-body">${byKey.map((m) => barRow(m.key, m.requests, keyMax, m.costUSD, " 次")).join("")}</div>
+        <summary>${t("dimByKey", byKey.length)}</summary>
+        <div class="oc-fold-body">${byKey.map((m) => barRow(m.key, m.requests, keyMax, m.costUSD, t("unitReqs"))).join("")}</div>
       </details>`)
     }
     if (byPlan.length) {
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
-        <summary>按 plan · ${byPlan.length}</summary>
-        <div class="oc-fold-body">${byPlan.map((m) => `<div class="oc-plan-row">${m.key}: ${m.requests} 次 · $${m.costUSD.toFixed(2)} · ${fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens)} tok</div>`).join("")}</div>
+        <summary>${t("dimByPlan", byPlan.length)}</summary>
+        <div class="oc-fold-body">${byPlan.map((m) => `<div class="oc-plan-row">${m.key}: ${m.requests} ${t("unitReqsPlain")} · $${m.costUSD.toFixed(2)} · ${fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens)} tok</div>`).join("")}</div>
       </details>`)
     }
 
     const overviewOpen = settings.overviewOpen ? " open" : ""
     panel.innerHTML = `
       <details class="oc-fold"${overviewOpen}>
-        <summary>概览</summary>
+        <summary>${t("statOverview")}</summary>
         <div class="oc-fold-body">
           <div class="oc-period">
-            <div class="oc-period-line"><span class="oc-period-k">统计窗口</span>${fmtD(winStart)} ~ ${fmtD(now)}（近 30 天明细）</div>
-            <div class="oc-period-line"><span class="oc-period-k">数据范围</span>${minTC ? `${fmtD(minTC)} ~ ${fmtD(maxTC)}` : "暂无明细"}${summary.length ? ` · 汇总 ${summary.length} 组` : ""}</div>
+            <div class="oc-period-line"><span class="oc-period-k">${t("statWindowLabel")}</span>${fmtD(winStart)} ~ ${fmtD(now)}（${t("statWindow30d")}）</div>
+            <div class="oc-period-line"><span class="oc-period-k">${t("statRangeLabel")}</span>${minTC ? `${fmtD(minTC)} ~ ${fmtD(maxTC)}` : t("statEmptyDetail")}${summary.length ? ` · ${t("statSummaryGroups", summary.length)}` : ""}</div>
           </div>
           <div class="oc-panel-head">
-            <span class="oc-muted">共 ${total.requests.toLocaleString()} 次请求</span>
+            <span class="oc-muted">${t("statTotalRequests", total.requests.toLocaleString())}</span>
           </div>
           <div class="oc-stat-grid">
             <div class="oc-stat"><div class="oc-stat-k">Input</div><div class="oc-stat-v">${fmtT(total.inputTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">Cache Read</div><div class="oc-stat-v">${fmtT(total.cacheReadTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">Output</div><div class="oc-stat-v">${fmtT(total.outputTokens)}</div></div>
-            <div class="oc-stat"><div class="oc-stat-k">成本(近30天)</div><div class="oc-stat-v">$${cost30d.toFixed(2)}</div></div>
+            <div class="oc-stat"><div class="oc-stat-k">${t("statCost30d")}</div><div class="oc-stat-v">$${cost30d.toFixed(2)}</div></div>
           </div>
           <div class="oc-quota-block">
-            <div class="oc-section-label">Go 限额（近 30 天明细）</div>
-            ${quotaRow("5 小时", cost5h, 12)}
-            ${quotaRow("7 天", cost7d, 30)}
-            ${quotaRow("30 天", cost30d, 60)}
+            <div class="oc-section-label">${t("statQuotaTitle")}</div>
+            ${quotaRow(t("statQuota5h"), cost5h, 12)}
+            ${quotaRow(t("statQuota7d"), cost7d, 30)}
+            ${quotaRow(t("statQuota30d"), cost30d, 60)}
           </div>
           <div class="oc-panel-foot">
-            <span>明细 ${detail.length.toLocaleString()} 条 + 汇总 ${summary.length.toLocaleString()} 组</span>
-            <span>已命名 key ${Object.keys(keyNames || {}).length} 个</span>
+            <span>${t("statFootDetail", detail.length.toLocaleString(), summary.length.toLocaleString())}</span>
+            <span>${t("statFootKeys", Object.keys(keyNames || {}).length)}</span>
           </div>
         </div>
       </details>
-      <div class="oc-dim-grid">${dimFolds.join("") || '<div class="oc-muted oc-empty">暂无维度数据，请先抓取</div>'}</div>`
+      <div class="oc-dim-grid">${dimFolds.join("") || `<div class="oc-muted oc-empty">${t("statEmptyDim")}</div>`}</div>`
 
     panel.querySelectorAll("details.oc-fold").forEach((el, i) => {
       const key = el.querySelector("summary")?.textContent?.trim() || i
       if (key in foldState) el.open = foldState[key]
-      else if (key.startsWith("概览")) el.open = settings.overviewOpen
+      else if (key.startsWith(t("statOverview"))) el.open = settings.overviewOpen
       else if (el.classList.contains("oc-dim-fold")) el.open = settings.dimensionsOpen
     })
     if (body) body.scrollTop = scrollTop
@@ -1135,7 +1418,7 @@
 #oc-go-export-root.oc-mode-large.oc-open #oc-go-export-drawer{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);display:flex;flex-direction:column}
 #oc-go-export-root.oc-busy #oc-go-export-info{color:#e84c3d}
 .oc-drawer-head,.oc-actions,#oc-go-export-info,.oc-export-block,.oc-settings-block{flex-shrink:0}
-#oc-go-export-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) rgba(255,255,255,.06)}
+#oc-go-export-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) rgba(255,255,255,.06)}
 #oc-go-export-body::-webkit-scrollbar{width:6px}
 #oc-go-export-body::-webkit-scrollbar-track{background:rgba(255,255,255,.06);border-radius:99px;margin:4px 0}
 #oc-go-export-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.28);border-radius:99px}
@@ -1171,19 +1454,39 @@
 .oc-drawer-close{font-size:18px}
 .oc-settings-block{padding:0 12px;border-bottom:1px solid rgba(255,255,255,.08)}
 .oc-settings-block.oc-fold>summary{padding:10px 0}
-.oc-settings-inner{padding-bottom:10px;max-height:240px;overflow-y:auto}
-.oc-settings-group{margin-bottom:10px}
-.oc-settings-label{font-size:10px;color:#888;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
-.oc-settings-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0;font-size:11px;color:#ccc}
-.oc-settings-radios{display:flex;gap:4px;flex-wrap:wrap}
-.oc-settings-radios label{display:flex;align-items:center;gap:3px;font-size:10px;color:#bbb;cursor:pointer;padding:3px 6px;background:#222;border:1px solid rgba(255,255,255,.08);border-radius:5px}
-.oc-settings-radios label:has(input:checked){color:#fff;background:#333;border-color:rgba(232,76,61,.4)}
-.oc-settings-radios input{margin:0}
-.oc-settings-row select,.oc-settings-row input[type=number]{padding:3px 6px;font-size:10px;color:#eee;background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:5px;font-family:inherit;min-width:64px}
-.oc-settings-row input[type=checkbox]{width:14px;height:14px;accent-color:#e84c3d;cursor:pointer}
-.oc-settings-meta{font-size:10px;color:#666;line-height:1.45;margin-top:6px;word-break:break-all}
-.oc-settings-advanced>summary{font-size:10px;color:#777;cursor:pointer;padding:4px 0;list-style:none}
+.oc-settings-inner{padding-bottom:12px;padding-right:4px;max-height:min(380px,60vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+.oc-settings-inner::-webkit-scrollbar{width:4px}
+.oc-settings-inner::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:99px}
+.oc-settings-group{margin-bottom:2px;border-radius:8px;overflow:hidden}
+.oc-settings-label{display:flex;align-items:center;gap:6px;font-size:10px;color:#777;font-weight:600;padding:8px 0 5px;letter-spacing:.04em;text-transform:uppercase}
+.oc-settings-label::before{content:"";flex:1;height:1px;background:rgba(255,255,255,.06)}
+.oc-settings-label::after{content:"";flex:5;height:1px;background:rgba(255,255,255,.06)}
+.oc-settings-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;font-size:11.5px;color:#d0d0d0}
+.oc-settings-row+.oc-settings-row{border-top:1px solid rgba(255,255,255,.04)}
+.oc-settings-row span{flex:1;min-width:0}
+.oc-settings-radios{display:flex;gap:3px;flex-wrap:wrap}
+.oc-settings-radios label{display:flex;align-items:center;gap:0;font-size:10.5px;color:#aaa;cursor:pointer;padding:4px 9px;background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:6px;transition:background .1s,color .1s,border-color .1s;white-space:nowrap}
+.oc-settings-radios label:hover{background:rgba(255,255,255,.09);color:#ddd}
+.oc-settings-radios label:has(input:checked){color:#fff;background:rgba(232,76,61,.18);border-color:rgba(232,76,61,.45)}
+.oc-settings-radios input[type=radio]{display:none}
+.oc-settings-row select{padding:4px 8px;font-size:11px;color:#eee;background:#1e1e1e;border:1px solid rgba(255,255,255,.14);border-radius:6px;font-family:inherit;cursor:pointer;outline:none}
+.oc-settings-row select:focus{border-color:rgba(232,76,61,.5)}
+.oc-settings-row input[type=number]{padding:4px 6px;font-size:11px;color:#eee;background:#1e1e1e;border:1px solid rgba(255,255,255,.14);border-radius:6px;font-family:inherit;width:52px;text-align:center;outline:none}
+.oc-settings-row input[type=number]:focus{border-color:rgba(232,76,61,.5)}
+.oc-toggle{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
+.oc-toggle input{opacity:0;width:0;height:0;position:absolute}
+.oc-toggle-track{display:block;width:36px;height:20px;background:rgba(255,255,255,.12);border-radius:99px;cursor:pointer;transition:background .2s}
+.oc-toggle input:checked+.oc-toggle-track{background:#e84c3d}
+.oc-toggle-track::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.oc-toggle input:checked+.oc-toggle-track::after{transform:translateX(16px)}
+.oc-settings-meta{font-size:10px;color:#555;line-height:1.5;margin-top:8px;padding:7px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:6px;word-break:break-all}
+.oc-settings-advanced{margin-top:4px}
+.oc-settings-advanced>summary{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#666;cursor:pointer;padding:5px 0;list-style:none;transition:color .1s}
+.oc-settings-advanced>summary:hover{color:#aaa}
 .oc-settings-advanced>summary::-webkit-details-marker{display:none}
+.oc-settings-advanced>summary::before{content:"›";font-size:13px;transition:transform .15s;display:inline-block}
+.oc-settings-advanced[open]>summary::before{transform:rotate(90deg)}
+.oc-settings-advanced>summary::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.06)}
 .oc-mode-large .oc-stat-grid{grid-template-columns:repeat(4,1fr)}
 .oc-dim-grid{display:block}
 .oc-mode-large .oc-dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
@@ -1239,24 +1542,24 @@
     if (!root || !toggle) return
     root.classList.toggle("oc-open", open)
     toggle.textContent = open ? "×" : "Go"
-    toggle.title = open ? "收起面板" : "展开 Go 用量导出"
+    toggle.title = open ? t("toggleClose") : t("toggleOpen")
     if (backdrop) backdrop.hidden = loadSettings().displayMode !== "large" || !open
     setPanelOpen(open)
   }
   async function setStatus(btn, text) {
     const info = $q("#oc-go-export-info")
-    const isProgress = text && /抓取中|同步中|页面抓取/.test(text)
+    const isProgress = text && (text === t("msgDomFallback") || text === t("msgAutoSync") || /…$/.test(text))
     if (info && text) info.textContent = text
-    if (btn && text && /出错|完成|抓取|同步|刷新|清空|就绪|失败|页面|导出|区间/.test(text)) {
+    if (btn && text && !/…$/.test(text)) {
       // 进度/结果写入 info，按钮标签保持不变
     } else if (btn && text) {
       btn.textContent = text
     }
     if (info && !isProgress) {
       const wsData = await getWorkspaceData().catch(() => emptyRec())
-      if (!text || /就绪|已刷新/.test(text)) {
-        const last = wsData.lastSync ? new Date(wsData.lastSync).toLocaleString() : "无"
-        info.textContent = `明细 ${wsData.detail.length.toLocaleString()} / 汇总 ${wsData.summary.length.toLocaleString()} 组 · 上次同步：${last}`
+      if (!text || text === t("msgReady") || text === t("msgRefreshed")) {
+        const last = wsData.lastSync ? new Date(wsData.lastSync).toLocaleString() : t("msgNone")
+        info.textContent = t("msgInfoBar", wsData.detail.length.toLocaleString(), wsData.summary.length.toLocaleString(), last)
       }
       renderPanel(wsData.detail, wsData.summary, wsData.keyNames || {})
     }
@@ -1280,33 +1583,34 @@
     toggle.id = "oc-go-export-toggle"
     toggle.type = "button"
     toggle.textContent = "Go"
-    toggle.title = "展开 Go 用量导出"
+    toggle.title = t("toggleOpen")
 
     const drawer = document.createElement("div")
     drawer.id = "oc-go-export-drawer"
 
     const head = document.createElement("div")
     head.className = "oc-drawer-head"
-    head.innerHTML = `<b>Go 用量导出</b>`
+    head.innerHTML = `<b>${t("panelTitle")}</b>`
     const headActions = document.createElement("div")
     headActions.className = "oc-head-actions"
     const btnExpand = document.createElement("button")
     btnExpand.id = "oc-go-export-expand"
     btnExpand.type = "button"
     btnExpand.className = "oc-head-btn"
-    btnExpand.textContent = "⤢"
-    btnExpand.title = "切换大窗口"
+    const _initMode = loadSettings().displayMode
+    btnExpand.textContent = _initMode === "large" ? "⤡" : "⤢"
+    btnExpand.title = _initMode === "large" ? t("btnExpandCompact") : t("btnExpandLarge")
     const btnSettings = document.createElement("button")
     btnSettings.id = "oc-go-export-settings-btn"
     btnSettings.type = "button"
     btnSettings.className = "oc-head-btn"
     btnSettings.textContent = "⚙"
-    btnSettings.title = "设置"
+    btnSettings.title = t("btnSettings")
     const btnClose = document.createElement("button")
     btnClose.className = "oc-head-btn oc-drawer-close"
     btnClose.type = "button"
     btnClose.textContent = "×"
-    btnClose.title = "收起"
+    btnClose.title = t("btnClose")
     headActions.append(btnExpand, btnSettings, btnClose)
     head.appendChild(headActions)
 
@@ -1314,47 +1618,78 @@
     settingsBlock.id = "oc-go-export-settings"
     settingsBlock.className = "oc-settings-block oc-fold"
     settingsBlock.innerHTML = `
-      <summary>设置</summary>
+      <summary>${t("settingsTitle")}</summary>
       <div class="oc-settings-inner">
         <div class="oc-settings-group">
-          <div class="oc-settings-label">显示</div>
+          <div class="oc-settings-label">${t("settingGroupDisplay")}</div>
           <div class="oc-settings-row">
-            <span>显示模式</span>
+            <span>${t("settingDisplayMode")}</span>
             <div class="oc-settings-radios">
-              <label><input type="radio" name="oc-display-mode" value="compact" /> 紧凑</label>
-              <label><input type="radio" name="oc-display-mode" value="large" /> 大窗口</label>
+              <label><input type="radio" name="oc-display-mode" value="compact" />${t("settingDisplayCompact")}</label>
+              <label><input type="radio" name="oc-display-mode" value="large" />${t("settingDisplayLarge")}</label>
             </div>
           </div>
-          <label class="oc-settings-row"><span>点击外部关闭</span><input type="checkbox" id="oc-set-click-outside" /></label>
-        </div>
-        <div class="oc-settings-group">
-          <div class="oc-settings-label">同步</div>
-          <label class="oc-settings-row"><span>自动同步（&gt;6h）</span><input type="checkbox" id="oc-set-auto-sync" /></label>
-        </div>
-        <div class="oc-settings-group">
-          <div class="oc-settings-label">导出</div>
           <div class="oc-settings-row">
-            <span>默认日期</span>
+            <span>${t("settingLang")}</span>
             <div class="oc-settings-radios">
-              <label><input type="radio" name="oc-export-preset" value="7" /> 近7天</label>
-              <label><input type="radio" name="oc-export-preset" value="30" /> 近30天</label>
-              <label><input type="radio" name="oc-export-preset" value="all" /> 全部</label>
+              <label><input type="radio" name="oc-lang" value="" />${t("settingLangAuto")}</label>
+              <label><input type="radio" name="oc-lang" value="zh" />中文</label>
+              <label><input type="radio" name="oc-lang" value="en" />English</label>
+              <label><input type="radio" name="oc-lang" value="ja" />日本語</label>
             </div>
           </div>
-          <label class="oc-settings-row"><span>导出区默认展开</span><input type="checkbox" id="oc-set-export-open" /></label>
+          <div class="oc-settings-row">
+            <span>${t("settingClickOutside")}</span>
+            <label class="oc-toggle"><input type="checkbox" id="oc-set-click-outside" /><span class="oc-toggle-track"></span></label>
+          </div>
         </div>
         <div class="oc-settings-group">
-          <div class="oc-settings-label">面板</div>
-          <label class="oc-settings-row"><span>概览默认展开</span><input type="checkbox" id="oc-set-overview-open" /></label>
-          <label class="oc-settings-row"><span>维度分析默认展开</span><input type="checkbox" id="oc-set-dimensions-open" /></label>
+          <div class="oc-settings-label">${t("settingGroupSync")}</div>
+          <div class="oc-settings-row">
+            <span>${t("settingAutoSync")} <small style="color:#666">${t("settingAutoSyncNote")}</small></span>
+            <label class="oc-toggle"><input type="checkbox" id="oc-set-auto-sync" /><span class="oc-toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="oc-settings-group">
+          <div class="oc-settings-label">${t("settingGroupExport")}</div>
+          <div class="oc-settings-row">
+            <span>${t("settingExportPreset")}</span>
+            <div class="oc-settings-radios">
+              <label><input type="radio" name="oc-export-preset" value="7" />${t("exportPreset7")}</label>
+              <label><input type="radio" name="oc-export-preset" value="30" />${t("exportPreset30")}</label>
+              <label><input type="radio" name="oc-export-preset" value="all" />${t("exportPresetAll")}</label>
+            </div>
+          </div>
+          <div class="oc-settings-row">
+            <span>${t("settingExportOpen")}</span>
+            <label class="oc-toggle"><input type="checkbox" id="oc-set-export-open" /><span class="oc-toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="oc-settings-group">
+          <div class="oc-settings-label">${t("settingGroupPanel")}</div>
+          <div class="oc-settings-row">
+            <span>${t("settingOverviewOpen")}</span>
+            <label class="oc-toggle"><input type="checkbox" id="oc-set-overview-open" /><span class="oc-toggle-track"></span></label>
+          </div>
+          <div class="oc-settings-row">
+            <span>${t("settingDimensionsOpen")}</span>
+            <label class="oc-toggle"><input type="checkbox" id="oc-set-dimensions-open" /><span class="oc-toggle-track"></span></label>
+          </div>
         </div>
         <details class="oc-settings-advanced">
-          <summary>高级</summary>
-          <label class="oc-settings-row"><span>拉页间隔</span>
+          <summary>${t("settingGroupAdvanced")}</summary>
+          <div class="oc-settings-row" style="margin-top:6px">
+            <span>${t("settingPageGap")}</span>
             <select id="oc-set-page-gap"><option value="250">250 ms</option><option value="350">350 ms</option><option value="500">500 ms</option></select>
-          </label>
-          <label class="oc-settings-row"><span>模型排行数</span><input type="number" id="oc-set-top-model" min="3" max="20" /></label>
-          <label class="oc-settings-row"><span>Key 排行数</span><input type="number" id="oc-set-top-key" min="3" max="20" /></label>
+          </div>
+          <div class="oc-settings-row">
+            <span>${t("settingTopModel")}</span>
+            <input type="number" id="oc-set-top-model" min="3" max="20" />
+          </div>
+          <div class="oc-settings-row">
+            <span>${t("settingTopKey")}</span>
+            <input type="number" id="oc-set-top-key" min="3" max="20" />
+          </div>
         </details>
         <div class="oc-settings-meta" id="oc-set-meta"></div>
       </div>`
@@ -1369,11 +1704,11 @@
 
     const actions = document.createElement("div")
     actions.className = "oc-actions"
-    const btnFull = mkBtn("全量抓取", true)
-    const btnInc = mkBtn("增量抓取", false)
-    const btnRefresh = mkBtn("刷新面板", false)
-    const btnNames = mkBtn("更新 key 名称", false)
-    const btnClear = mkBtn("清空缓存", false)
+    const btnFull = mkBtn(t("btnFull"), true)
+    const btnInc = mkBtn(t("btnInc"), false)
+    const btnRefresh = mkBtn(t("btnRefresh"), false)
+    const btnNames = mkBtn(t("btnNames"), false)
+    const btnClear = mkBtn(t("btnClear"), false)
     btnClear.classList.add("oc-danger", "oc-span2")
     actions.append(btnFull, btnInc, btnRefresh, btnNames, btnClear)
 
@@ -1384,12 +1719,12 @@
     exportBlock.className = "oc-export-block oc-fold"
     exportBlock.open = loadSettings().exportSectionOpen
     exportBlock.innerHTML = `
-      <summary>导出数据</summary>
+      <summary>${t("exportTitle")}</summary>
       <div class="oc-export-inner">
         <div class="oc-export-presets">
-          <button type="button" data-range="7">近7天</button>
-          <button type="button" data-range="30" class="oc-active">近30天</button>
-          <button type="button" data-range="all">全部</button>
+          <button type="button" data-range="7">${t("exportPreset7")}</button>
+          <button type="button" data-range="30" class="oc-active">${t("exportPreset30")}</button>
+          <button type="button" data-range="all">${t("exportPresetAll")}</button>
         </div>
         <div class="oc-export-dates">
           <input type="date" id="oc-export-from" />
@@ -1397,8 +1732,8 @@
           <input type="date" id="oc-export-to" />
         </div>
         <div class="oc-export-actions">
-          <button type="button" id="oc-export-csv" class="oc-primary">导出 CSV</button>
-          <button type="button" id="oc-export-xlsx">导出 Excel</button>
+          <button type="button" id="oc-export-csv" class="oc-primary">${t("exportCsv")}</button>
+          <button type="button" id="oc-export-xlsx">${t("exportExcel")}</button>
         </div>
       </div>`
 
@@ -1468,6 +1803,16 @@
         applyDisplayMode(el.value)
       })
     })
+    $qa('input[name="oc-lang"]').forEach((el) => {
+      el.addEventListener("change", () => {
+        if (!el.checked) return
+        settingsCache = null
+        saveSettings({ lang: el.value })
+        const oldRoot = document.getElementById("oc-go-export-root")
+        if (oldRoot) oldRoot.remove()
+        inject()
+      })
+    })
     $qa('input[name="oc-export-preset"]').forEach((el) => {
       el.addEventListener("change", () => {
         if (!el.checked) return
@@ -1496,7 +1841,7 @@
       buttons.forEach((b) => (b.disabled = true))
       Promise.race([fn(), new Promise((res) => setTimeout(() => res("timeout"), 10 * 60 * 1000))])
         .catch((e) => {
-          setStatus(null, "出错: " + e.message)
+          setStatus(null, t("msgError", e.message))
           console.error(e)
         })
         .finally(() => {
@@ -1507,10 +1852,10 @@
 
     btnFull.addEventListener("click", guard(() => run("full", btnFull)))
     btnInc.addEventListener("click", guard(() => run("incremental", btnInc)))
-    btnRefresh.addEventListener("click", guard(async () => setStatus(null, "已刷新")))
+    btnRefresh.addEventListener("click", guard(async () => setStatus(null, t("msgRefreshed"))))
     btnClear.addEventListener("click", guard(async () => {
       await idbDelete(WS_ID)
-      setStatus(null, "已清空")
+      setStatus(null, t("msgCleared"))
       syncSettingsUI()
     }))
     btnNames.addEventListener("click", guard(() => refreshApiKeyNames()))
@@ -1533,14 +1878,14 @@
     syncSettingsUI()
     setExportRange(loadSettings().exportPresetDays)
     setDrawerOpen(panelOpen())
-    setStatus(null, "就绪")
+    setStatus(null, t("msgReady"))
 
     if (autoEnabled()) {
       waitFor(() => !!$q('[data-slot="usage-table"]'), 15000).then(async () => {
         const wsData = await getWorkspaceData()
         if (!wsData.lastSync || Date.now() - wsData.lastSync > AUTO_GAP_MS) {
           openDrawer()
-          setStatus(null, "自动增量同步中…")
+          setStatus(null, t("msgAutoSync"))
           run("incremental", btnInc, { silent: true, downloadFiles: false }).catch(() => {}).finally(() => touch())
         } else touch()
       })
