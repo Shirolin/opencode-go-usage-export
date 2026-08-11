@@ -1438,7 +1438,7 @@
     if (byPlan.length) {
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByPlan", byPlan.length)}</summary>
-        <div class="oc-fold-body">${byPlan.map((m) => `<div class="oc-plan-row">${m.key}: ${m.requests} ${t("unitReqsPlain")} · $${m.costUSD.toFixed(2)} · ${fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens)} tok</div>`).join("")}</div>
+        <div class="oc-fold-body">${byPlan.map((m) => `<div class="oc-plan-row"><span class="oc-plan-key">${m.key}</span><span class="oc-plan-meta"><span>${m.requests} ${t("unitReqsPlain")}</span><span>$${m.costUSD.toFixed(2)}</span><span>${fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens)} tok</span></span></div>`).join("")}</div>
       </details>`)
     }
 
@@ -1452,13 +1452,14 @@
             <div class="oc-period-line"><span class="oc-period-k">${t("statRangeLabel")}</span>${minTC ? `${fmtD(minTC)} ~ ${fmtD(maxTC)}` : t("statEmptyDetail")}${summary.length ? ` · ${t("statSummaryGroups", summary.length)}` : ""}</div>
           </div>
           <div class="oc-panel-head">
-            <span class="oc-muted">${t("statTotalRequests", total.requests.toLocaleString())}</span>
+            <span class="oc-stat-total">${t("statTotalRequests", total.requests.toLocaleString())}</span>
+            <span class="oc-stat-cost-pill">$${cost30d.toFixed(2)}</span>
           </div>
           <div class="oc-stat-grid">
             <div class="oc-stat"><div class="oc-stat-k">Input</div><div class="oc-stat-v">${fmtT(total.inputTokens)}</div></div>
-            <div class="oc-stat"><div class="oc-stat-k">Cache Read</div><div class="oc-stat-v">${fmtT(total.cacheReadTokens)}</div></div>
+            <div class="oc-stat"><div class="oc-stat-k">Cache</div><div class="oc-stat-v">${fmtT(total.cacheReadTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">Output</div><div class="oc-stat-v">${fmtT(total.outputTokens)}</div></div>
-            <div class="oc-stat"><div class="oc-stat-k">${t("statCost30d")}</div><div class="oc-stat-v">$${cost30d.toFixed(2)}</div></div>
+            <div class="oc-stat"><div class="oc-stat-k">5h / 7d</div><div class="oc-stat-v oc-stat-v-sm">$${cost5h.toFixed(2)} / $${cost7d.toFixed(2)}</div></div>
           </div>
           <div class="oc-quota-block">
             <div class="oc-section-label">${t("statQuotaTitle")}</div>
@@ -1531,7 +1532,7 @@
 .oc-fold>summary::after{content:"▾";flex-shrink:0;display:flex;align-items:center;justify-content:center;width:32px;height:32px;font-size:16px;line-height:1;color:#bbb;background:rgba(255,255,255,.08);border-radius:8px;transition:transform .15s,background .15s,color .15s}
 .oc-fold>summary:hover::after{background:rgba(255,255,255,.14);color:#fff}
 .oc-fold:not([open])>summary::after{transform:rotate(-90deg)}
-.oc-fold-body{padding-bottom:8px}
+.oc-fold-body{padding-bottom:10px}
 .oc-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;border-bottom:1px solid rgba(255,255,255,.08);gap:8px}
 .oc-drawer-head b{font-size:13px;color:#fff;font-weight:600;flex:1;min-width:0}
 .oc-head-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
@@ -1588,36 +1589,44 @@
 .oc-actions button.oc-primary{background:#e84c3d;border-color:transparent}
 .oc-actions button.oc-primary:hover:not(:disabled){background:#d44335}
 #oc-go-export-info{padding:0 12px 8px;color:#999;font-size:11px;line-height:1.45;min-height:1.2em;word-break:break-word}
-.oc-period{margin-bottom:8px;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.06);border-radius:8px;font-size:10px;color:#aaa;line-height:1.5}
-.oc-period-line{display:flex;gap:6px;align-items:baseline}
-.oc-period-line+.oc-period-line{margin-top:3px}
-.oc-period-k{color:#777;flex-shrink:0;min-width:52px}
-.oc-panel-head{display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px}
-.oc-muted{font-size:10px;color:#888}
-.oc-empty{padding:12px 0;text-align:center}
-.oc-quota-block{margin-bottom:6px}
-.oc-quota-row{margin:5px 0}
-.oc-quota-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#888;margin-bottom:3px}
-.oc-quota-num{font-variant-numeric:tabular-nums;color:#aaa}
-.oc-quota-track{height:5px;background:#2a2a2a;border-radius:99px;overflow:hidden}
-.oc-quota-fill{height:100%;background:#4caf82;border-radius:99px;transition:width .2s}
+.oc-period{margin-bottom:10px;padding:10px 10px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;font-size:10.5px;color:#999;line-height:1.6}
+.oc-period-line{display:flex;gap:8px;align-items:baseline}
+.oc-period-line+.oc-period-line{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.05)}
+.oc-period-k{color:#666;flex-shrink:0;min-width:56px;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+.oc-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.oc-stat-total{font-size:11px;color:#888}
+.oc-stat-cost-pill{font-size:13px;font-weight:700;color:#f0f0f0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.oc-muted{font-size:10.5px;color:#777}
+.oc-stat-v-sm{font-size:11px!important}
+.oc-empty{padding:16px 0;text-align:center;color:#555;font-size:11px}
+.oc-quota-block{margin-bottom:8px;padding:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px}
+.oc-quota-row{margin:7px 0}
+.oc-quota-row:first-of-type{margin-top:2px}
+.oc-quota-meta{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;color:#888;margin-bottom:4px}
+.oc-quota-num{font-variant-numeric:tabular-nums;color:#bbb;font-weight:500}
+.oc-quota-track{height:6px;background:#222;border-radius:99px;overflow:hidden}
+.oc-quota-fill{height:100%;background:#4caf82;border-radius:99px;transition:width .25s}
 .oc-quota-fill.oc-quota-mid{background:#e6a817}
 .oc-quota-fill.oc-quota-warn{background:#e84c3d}
-.oc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px}
-.oc-stat{background:#1f1f1f;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.05)}
-.oc-stat-k{font-size:10px;color:#888;margin-bottom:2px}
-.oc-stat-v{font-size:12px;color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
-.oc-section-label{font-size:10px;color:#888;margin:4px 0 6px}
-.oc-bar-row{margin:6px 0 8px}
-.oc-bar-meta{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px;min-width:0}
-.oc-bar-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ddd;font-size:11px}
-.oc-bar-cost{flex-shrink:0;color:#aaa;font-size:10px;font-variant-numeric:tabular-nums}
+.oc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.oc-stat{background:rgba(255,255,255,.04);padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06)}
+.oc-stat-k{font-size:10px;color:#666;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+.oc-stat-v{font-size:14px;color:#f0f0f0;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.oc-section-label{font-size:10px;color:#666;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.oc-bar-row{margin:0 0 2px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.oc-bar-row:last-child{border-bottom:none;margin-bottom:0}
+.oc-bar-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;min-width:0}
+.oc-bar-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ddd;font-size:11px;font-weight:500}
+.oc-bar-cost{flex-shrink:0;color:#888;font-size:10.5px;font-variant-numeric:tabular-nums}
 .oc-bar-body{display:flex;align-items:center;gap:8px}
-.oc-bar-track{flex:1;height:6px;background:#2a2a2a;border-radius:99px;overflow:hidden;min-width:0}
-.oc-bar-fill{height:100%;background:#e84c3d;border-radius:99px}
-.oc-bar-val{flex-shrink:0;min-width:52px;text-align:right;color:#ccc;font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.oc-plan-row{font-size:11px;color:#ddd;margin:2px 0}
-.oc-panel-foot{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px;font-size:10px;color:#777}
+.oc-bar-track{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;min-width:0}
+.oc-bar-fill{height:100%;background:linear-gradient(90deg,#c0392b,#e84c3d);border-radius:99px;transition:width .2s}
+.oc-bar-val{flex-shrink:0;min-width:48px;text-align:right;color:#999;font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.oc-plan-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;color:#ccc;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.oc-plan-row:last-child{border-bottom:none}
+.oc-plan-key{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.oc-plan-meta{display:flex;gap:8px;flex-shrink:0;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
+.oc-panel-foot{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:#555}
 @media(max-width:640px){#oc-go-export-root{bottom:14px;right:14px}#oc-go-export-root.oc-mode-compact #oc-go-export-drawer{width:min(300px,calc(100vw - 28px))}#oc-go-export-root.oc-mode-large #oc-go-export-drawer{width:min(720px,calc(100vw - 24px))}.oc-mode-large .oc-stat-grid{grid-template-columns:1fr 1fr}.oc-mode-large .oc-dim-grid{grid-template-columns:1fr}}`
   }
 
