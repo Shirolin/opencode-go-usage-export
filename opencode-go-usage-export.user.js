@@ -128,6 +128,7 @@
       msgNoSheetjs: "SheetJS 未加载，请用 CSV",
       msgExportDone: "已导出：明细 {0} 条 · 汇总 {1} 组 · {2} ~ {3}",
       msgError: "出错: {0}",
+      msgTimeout: "操作超时（10 分钟）",
       msgNone: "无",
     },
     en: {
@@ -213,6 +214,7 @@
       msgNoSheetjs: "SheetJS unavailable — use CSV instead",
       msgExportDone: "Exported: {0} records · {1} aggregates · {2} – {3}",
       msgError: "Error: {0}",
+      msgTimeout: "Operation timed out (10 min)",
       msgNone: "—",
     },
     ja: {
@@ -298,6 +300,7 @@
       msgNoSheetjs: "SheetJS が読み込まれていません。CSV をお使いください",
       msgExportDone: "保存しました: {0} 件 · {1} グループ · {2} ～ {3}",
       msgError: "エラー: {0}",
+      msgTimeout: "操作がタイムアウトしました（10分）",
       msgNone: "—",
     },
     "zh-tw": {
@@ -383,6 +386,7 @@
       msgNoSheetjs: "SheetJS 未載入，請改用 CSV",
       msgExportDone: "匯出完成：明細 {0} 筆・彙整 {1} 組・{2} ～ {3}",
       msgError: "錯誤：{0}",
+      msgTimeout: "操作逾時（10 分鐘）",
       msgNone: "—",
     },
   }
@@ -1331,6 +1335,7 @@
       setStatus(btn, t("msgDomFallback"))
       rows = await domScrapeAll((n) => setStatus(btn, t("msgDomProgress", n)))
     }
+    if (!Array.isArray(rows)) rows = []
 
     let added = 0
     for (const r of rows) {
@@ -1653,11 +1658,6 @@
     const info = $q("#oc-go-export-info")
     const isProgress = text && /…$/.test(text)
     if (info && text) info.textContent = text
-    if (btn && text && !/…$/.test(text)) {
-      // 进度/结果写入 info，按钮标签保持不变
-    } else if (btn && text) {
-      btn.textContent = text
-    }
     if (info && !isProgress) {
       const wsData = await getWorkspaceData().catch(() => emptyRec())
       if (!text || text === t("msgReady") || text === t("msgRefreshed")) {
@@ -1958,7 +1958,7 @@
       root.classList.add("oc-busy")
       const buttons = [btnFull, btnInc, btnRefresh, btnNames, btnClear]
       buttons.forEach((b) => (b.disabled = true))
-      Promise.race([fn(), new Promise((res) => setTimeout(() => res("timeout"), 10 * 60 * 1000))])
+      Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error(t("msgTimeout"))), 10 * 60 * 1000))])
         .catch((e) => {
           setStatus(null, t("msgError", e.message))
           console.error(e)
