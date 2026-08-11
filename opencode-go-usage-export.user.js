@@ -1383,8 +1383,9 @@
       cacheReadTokens: sumF(detail, "cacheReadTokens") + sumF(summary, "cacheReadTokens"),
       outputTokens: sumF(detail, "outputTokens") + sumF(summary, "outputTokens"),
     }
-    const byModel = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).slice(0, settings.topModelCount)
-    const byKey = mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)).slice(0, settings.topKeyCount)
+    const topByCost = (arr, n) => [...arr].sort((a, b) => b.costUSD - a.costUSD).slice(0, n)
+    const byModel = topByCost(mergedAggs(detail, summary, (s) => s.model, (r) => r.model), settings.topModelCount)
+    const byKey = topByCost(mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
     const byPlan = mergedAggs(detail, summary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
 
     const fmtT = (n) => {
@@ -1398,15 +1399,16 @@
     const maxTC = detail.some((r) => r.timeCreated) ? Math.max(...detail.map((r) => r.timeCreated)) : null
     const winStart = now - WINDOW_MS
 
-    const barRow = (label, metric, max, cost, unit = "") =>
+    // bar 统一以费用为主指标排序和宽度，secondary 为右侧标注文字
+    const barRow = (label, cost, maxCost, secondary = "") =>
       `<div class="oc-bar-row">
         <div class="oc-bar-meta">
           <span class="oc-bar-label" title="${String(label).replace(/"/g, "&quot;")}">${label}</span>
           <span class="oc-bar-cost">${cost != null ? "$" + cost.toFixed(2) : ""}</span>
         </div>
         <div class="oc-bar-body">
-          <div class="oc-bar-track"><div class="oc-bar-fill" style="width:${max ? Math.max(4, (metric / max) * 100) : 0}%"></div></div>
-          <span class="oc-bar-val">${fmtT(metric)}${unit}</span>
+          <div class="oc-bar-track"><div class="oc-bar-fill" style="width:${maxCost ? Math.max(4, (cost / maxCost) * 100) : 0}%"></div></div>
+          <span class="oc-bar-val">${secondary}</span>
         </div>
       </div>`
 
@@ -1421,24 +1423,27 @@
 
     const dimFolds = []
     const dimOpen = settings.dimensionsOpen ? " open" : ""
+    // 三个维度统一按费用降序，bar 宽度 = 费用占比
     if (byModel.length) {
-      const maxTok = byModel[0].inputTokens + byModel[0].cacheReadTokens + byModel[0].outputTokens
+      const maxCost = byModel[0].costUSD
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByModel", byModel.length)}</summary>
-        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.inputTokens + m.cacheReadTokens + m.outputTokens, maxTok, m.costUSD, t("unitTok"))).join("")}</div>
+        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok"))).join("")}</div>
       </details>`)
     }
     if (byKey.length) {
-      const keyMax = Math.max(...byKey.map((m) => m.requests))
+      const maxCost = byKey[0].costUSD
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByKey", byKey.length)}</summary>
-        <div class="oc-fold-body">${byKey.map((m) => barRow(m.key, m.requests, keyMax, m.costUSD, t("unitReqs"))).join("")}</div>
+        <div class="oc-fold-body">${byKey.map((m) => barRow(m.key, m.costUSD, maxCost, m.requests.toLocaleString() + t("unitReqs"))).join("")}</div>
       </details>`)
     }
     if (byPlan.length) {
+      const planSorted = [...byPlan].sort((a, b) => b.costUSD - a.costUSD)
+      const maxCost = planSorted[0].costUSD
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
-        <summary>${t("dimByPlan", byPlan.length)}</summary>
-        <div class="oc-fold-body">${byPlan.map((m) => `<div class="oc-plan-row"><span class="oc-plan-key">${m.key}</span><span class="oc-plan-meta"><span>${m.requests} ${t("unitReqsPlain")}</span><span>$${m.costUSD.toFixed(2)}</span><span>${fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens)} tok</span></span></div>`).join("")}</div>
+        <summary>${t("dimByPlan", planSorted.length)}</summary>
+        <div class="oc-fold-body">${planSorted.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + " · " + m.requests.toLocaleString() + t("unitReqs"))).join("")}</div>
       </details>`)
     }
 
