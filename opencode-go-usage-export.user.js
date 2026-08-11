@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go 用量导出 CSV
 // @namespace    opencode.go-usage-export
-// @version      5.8.1
+// @version      5.9.0
 // @run-at       document-start
 // @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出
 // @match        https://opencode.ai/workspace/*/usage
@@ -28,6 +28,7 @@
     autoSync: true,
     clickOutsideClose: true,
     exportPresetDays: 30,
+    statPresetDays: 30,
     exportSectionOpen: true,
     overviewOpen: true,
     dimensionsOpen: true,
@@ -87,7 +88,9 @@
       statOverview: "概览",
       statWindowLabel: "统计窗口",
       statRangeLabel: "数据范围",
+      statWindow7d: "近 7 天明细",
       statWindow30d: "近 30 天明细",
+      statWindowAll: "全部数据",
       statTotalRequests: "共 {0} 次请求",
       statCost30d: "成本(近30天)",
       statQuotaTitle: "Go 限额（近 30 天明细）",
@@ -176,7 +179,9 @@
       statOverview: "Overview",
       statWindowLabel: "Window",
       statRangeLabel: "Date range",
+      statWindow7d: "Last 7 days",
       statWindow30d: "30-day rolling window",
+      statWindowAll: "All time",
       statTotalRequests: "{0} requests",
       statCost30d: "Cost (30d)",
       statQuotaTitle: "Go quota (last 30d)",
@@ -263,7 +268,9 @@
       statOverview: "概要",
       statWindowLabel: "集計期間",
       statRangeLabel: "データ範囲",
+      statWindow7d: "直近7日分",
       statWindow30d: "直近30日分",
+      statWindowAll: "全期間",
       statTotalRequests: "{0} リクエスト",
       statCost30d: "費用（30日）",
       statQuotaTitle: "Go 利用上限（直近30日）",
@@ -350,7 +357,9 @@
       statOverview: "概覽",
       statWindowLabel: "統計區間",
       statRangeLabel: "資料範圍",
+      statWindow7d: "近 7 天明細",
       statWindow30d: "近 30 天明細",
+      statWindowAll: "全部資料",
       statTotalRequests: "共 {0} 次請求",
       statCost30d: "費用（近 30 天）",
       statQuotaTitle: "Go 配額（近 30 天）",
@@ -1385,20 +1394,48 @@
     const now = Date.now()
     const sumF = (list, f) => list.reduce((a, r) => a + (r[f] ?? 0), 0)
     const sumCost = (list) => list.reduce((a, r) => a + (r.costUSD ?? 0), 0)
+
+    // GO 限额始终用完整 detail 滚动窗口
     const cost5h = sumCost(detail.filter((r) => r.timeCreated && now - r.timeCreated < 5 * 3600e3))
     const cost7d = sumCost(detail.filter((r) => r.timeCreated && now - r.timeCreated < 7 * 24 * 3600e3))
-    const cost30d = sumCost(detail)
+    const cost30dQuota = sumCost(detail)
 
+    // 概览统计区间（与限额独立）
+    let preset = settings.statPresetDays
+    if (preset !== 7 && preset !== 30 && preset !== "all") preset = 30
+    let viewDetail = detail
+    let viewSummary = []
+    let winStart = now - WINDOW_MS
+    let winLabel = t("statWindow30d")
+    if (preset === 7) {
+      const cut = now - 7 * 24 * 3600e3
+      viewDetail = detail.filter((r) => r.timeCreated && r.timeCreated >= cut)
+      viewSummary = []
+      winStart = cut
+      winLabel = t("statWindow7d")
+    } else if (preset === 30) {
+      viewDetail = detail
+      viewSummary = []
+      winStart = now - WINDOW_MS
+      winLabel = t("statWindow30d")
+    } else {
+      viewDetail = detail
+      viewSummary = summary
+      winStart = null
+      winLabel = t("statWindowAll")
+    }
+
+    const viewCost = sumCost(viewDetail) + sumF(viewSummary, "costUSD")
     const total = {
-      requests: detail.length + sumF(summary, "requests"),
-      inputTokens: sumF(detail, "inputTokens") + sumF(summary, "inputTokens"),
-      cacheReadTokens: sumF(detail, "cacheReadTokens") + sumF(summary, "cacheReadTokens"),
-      outputTokens: sumF(detail, "outputTokens") + sumF(summary, "outputTokens"),
+      requests: viewDetail.length + sumF(viewSummary, "requests"),
+      inputTokens: sumF(viewDetail, "inputTokens") + sumF(viewSummary, "inputTokens"),
+      cacheReadTokens: sumF(viewDetail, "cacheReadTokens") + sumF(viewSummary, "cacheReadTokens"),
+      outputTokens: sumF(viewDetail, "outputTokens") + sumF(viewSummary, "outputTokens"),
     }
     const topByCost = (arr, n) => [...arr].sort((a, b) => b.costUSD - a.costUSD).slice(0, n)
-    const byModel = topByCost(mergedAggs(detail, summary, (s) => s.model, (r) => r.model), settings.topModelCount)
-    const byKey = topByCost(mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
-    const byPlan = mergedAggs(detail, summary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
+    const byModel = topByCost(mergedAggs(viewDetail, viewSummary, (s) => s.model, (r) => r.model), settings.topModelCount)
+    const byKey = topByCost(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
+    const byPlan = mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
 
     const fmtT = (n) => {
       if (n == null) return "-"
@@ -1407,9 +1444,9 @@
       return String(n)
     }
     const fmtD = (t) => (t ? new Date(t).toLocaleDateString() : "-")
-    const minTC = detail.some((r) => r.timeCreated) ? Math.min(...detail.map((r) => r.timeCreated)) : null
-    const maxTC = detail.some((r) => r.timeCreated) ? Math.max(...detail.map((r) => r.timeCreated)) : null
-    const winStart = now - WINDOW_MS
+    const minTC = viewDetail.some((r) => r.timeCreated) ? Math.min(...viewDetail.map((r) => r.timeCreated)) : null
+    const maxTC = viewDetail.some((r) => r.timeCreated) ? Math.max(...viewDetail.map((r) => r.timeCreated)) : null
+    const windowText = winStart != null ? `${fmtD(winStart)} ~ ${fmtD(now)}（${winLabel}）` : winLabel
 
     // bar 统一以费用为主指标排序和宽度，secondary 为右侧标注文字
     const barRow = (label, cost, maxCost, secondary = "") =>
@@ -1460,17 +1497,23 @@
     }
 
     const overviewOpen = settings.overviewOpen ? " open" : ""
+    const presetStr = String(preset)
     panel.innerHTML = `
       <details class="oc-fold"${overviewOpen}>
         <summary>${t("statOverview")}</summary>
         <div class="oc-fold-body">
+          <div class="oc-stat-presets">
+            <button type="button" data-stat-range="7"${presetStr === "7" ? ' class="oc-active"' : ""}>${t("exportPreset7")}</button>
+            <button type="button" data-stat-range="30"${presetStr === "30" ? ' class="oc-active"' : ""}>${t("exportPreset30")}</button>
+            <button type="button" data-stat-range="all"${presetStr === "all" ? ' class="oc-active"' : ""}>${t("exportPresetAll")}</button>
+          </div>
           <div class="oc-period">
-            <div class="oc-period-line"><span class="oc-period-k">${t("statWindowLabel")}</span>${fmtD(winStart)} ~ ${fmtD(now)}（${t("statWindow30d")}）</div>
-            <div class="oc-period-line"><span class="oc-period-k">${t("statRangeLabel")}</span>${minTC ? `${fmtD(minTC)} ~ ${fmtD(maxTC)}` : t("statEmptyDetail")}${summary.length ? ` · ${t("statSummaryGroups", summary.length)}` : ""}</div>
+            <div class="oc-period-line"><span class="oc-period-k">${t("statWindowLabel")}</span>${windowText}</div>
+            <div class="oc-period-line"><span class="oc-period-k">${t("statRangeLabel")}</span>${minTC ? `${fmtD(minTC)} ~ ${fmtD(maxTC)}` : t("statEmptyDetail")}${viewSummary.length ? ` · ${t("statSummaryGroups", viewSummary.length)}` : ""}</div>
           </div>
           <div class="oc-panel-head">
             <span class="oc-stat-total">${t("statTotalRequests", total.requests.toLocaleString())}</span>
-            <span class="oc-stat-cost-pill">$${cost30d.toFixed(2)}</span>
+            <span class="oc-stat-cost-pill">$${viewCost.toFixed(2)}</span>
           </div>
           <div class="oc-stat-grid">
             <div class="oc-stat"><div class="oc-stat-k">Input</div><div class="oc-stat-v">${fmtT(total.inputTokens)}</div></div>
@@ -1482,10 +1525,10 @@
             <div class="oc-section-label">${t("statQuotaTitle")}</div>
             ${quotaRow(t("statQuota5h"), cost5h, 12)}
             ${quotaRow(t("statQuota7d"), cost7d, 30)}
-            ${quotaRow(t("statQuota30d"), cost30d, 60)}
+            ${quotaRow(t("statQuota30d"), cost30dQuota, 60)}
           </div>
           <div class="oc-panel-foot">
-            <span>${t("statFootDetail", detail.length.toLocaleString(), summary.length.toLocaleString())}</span>
+            <span>${t("statFootDetail", viewDetail.length.toLocaleString(), viewSummary.length.toLocaleString())}</span>
             <span>${t("statFootKeys", Object.keys(keyNames || {}).length)}</span>
           </div>
         </div>
@@ -1497,6 +1540,16 @@
       if (key in foldState) el.open = foldState[key]
       else if (key.startsWith(t("statOverview"))) el.open = settings.overviewOpen
       else if (el.classList.contains("oc-dim-fold")) el.open = settings.dimensionsOpen
+    })
+    panel.querySelectorAll(".oc-stat-presets button").forEach((b) => {
+      b.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const raw = b.dataset.statRange
+        const val = raw === "all" ? "all" : parseInt(raw, 10)
+        saveSettings({ statPresetDays: val })
+        renderPanel(detail, summary, keyNames)
+      })
     })
     if (body) body.scrollTop = scrollTop
   }
@@ -1537,6 +1590,10 @@
 .oc-export-presets{display:flex;gap:4px;margin-bottom:6px}
 .oc-export-presets button{flex:1;padding:4px 0;font-size:10px;color:#ccc;background:#222;border:1px solid rgba(255,255,255,.08);border-radius:5px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .oc-export-presets button.oc-active{color:#fff;background:#333;border-color:rgba(232,76,61,.5)}
+.oc-stat-presets{display:flex;gap:4px;margin-bottom:8px}
+.oc-stat-presets button{flex:1;padding:5px 0;font-size:10.5px;color:#ccc;background:#222;border:1px solid rgba(255,255,255,.08);border-radius:5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.oc-stat-presets button.oc-active{color:#fff;background:#333;border-color:rgba(232,76,61,.5)}
+.oc-stat-presets button:hover{background:#2a2a2a;color:#eee}
 .oc-export-dates{display:flex;align-items:center;gap:4px;margin-bottom:6px}
 .oc-export-dates input{flex:1;min-width:0;padding:4px 6px;font-size:10px;color:#eee;background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:5px;font-family:inherit}
 .oc-export-dates span{color:#666;font-size:10px}
