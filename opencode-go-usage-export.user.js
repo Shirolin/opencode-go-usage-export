@@ -300,12 +300,98 @@
       msgError: "エラー: {0}",
       msgNone: "なし",
     },
+    "zh-tw": {
+      panelTitle: "Go 用量匯出",
+      toggleOpen: "展開 Go 用量匯出",
+      toggleClose: "收起面板",
+      btnExpandCompact: "切換緊湊模式",
+      btnExpandLarge: "切換大視窗",
+      btnSettings: "設定",
+      btnClose: "收起",
+      btnFull: "全量擷取",
+      btnInc: "增量擷取",
+      btnRefresh: "重新整理",
+      btnNames: "更新 key 名稱",
+      btnClear: "清除快取",
+      settingsTitle: "設定",
+      settingGroupDisplay: "顯示",
+      settingGroupSync: "同步",
+      settingGroupExport: "匯出",
+      settingGroupPanel: "面板",
+      settingGroupAdvanced: "進階選項",
+      settingDisplayMode: "顯示模式",
+      settingDisplayCompact: "緊湊",
+      settingDisplayLarge: "大視窗",
+      settingClickOutside: "點擊外部關閉",
+      settingAutoSync: "自動同步",
+      settingAutoSyncNote: "（>6h 增量）",
+      settingExportPreset: "預設日期區間",
+      settingExportOpen: "預設展開匯出區",
+      settingOverviewOpen: "預設展開概覽",
+      settingDimensionsOpen: "預設展開維度分析",
+      settingPageGap: "拉頁間隔",
+      settingTopModel: "模型排行數",
+      settingTopKey: "Key 排行數",
+      settingLang: "語言",
+      settingLangAuto: "自動",
+      exportTitle: "匯出資料",
+      exportPreset7: "近7天",
+      exportPreset30: "近30天",
+      exportPresetAll: "全部",
+      exportCsv: "匯出 CSV",
+      exportExcel: "匯出 Excel",
+      statOverview: "概覽",
+      statWindowLabel: "統計視窗",
+      statRangeLabel: "資料範圍",
+      statWindow30d: "近 30 天明細",
+      statTotalRequests: "共 {0} 次請求",
+      statCost30d: "費用（近30天）",
+      statQuotaTitle: "Go 配額（近 30 天明細）",
+      statQuota5h: "5 小時",
+      statQuota7d: "7 天",
+      statQuota30d: "30 天",
+      statFootDetail: "明細 {0} 筆 + 彙總 {1} 組",
+      statFootKeys: "已命名 key {0} 個",
+      statEmptyDim: "暫無維度資料，請先擷取",
+      statEmptyDetail: "暫無明細",
+      statSummaryGroups: "彙總 {0} 組",
+      dimByModel: "依模型 · {0}",
+      dimByKey: "依 API key · {0}",
+      dimByPlan: "依 plan · {0}",
+      unitTok: " tok",
+      unitReqs: " 次",
+      unitReqsPlain: "次",
+      keyUnknown: "未識別(dom)",
+      dateUnknown: "未知",
+      msgReady: "就緒",
+      msgRefreshed: "已重新整理",
+      msgCleared: "已清除",
+      msgAutoSync: "自動增量同步中…",
+      msgFetchProgressInc: "增量擷取中… 已拉 {0} 筆",
+      msgFetchProgressFull: "全量擷取中… 已拉 {0} 筆",
+      msgDomFallback: "網路擷取失敗，改用頁面擷取（較慢）…",
+      msgDomProgress: "頁面擷取中… {0} 筆",
+      msgDoneInc: "增量完成：{0} 來源 · 新增 {1} 筆 · 明細 {2} / 彙總 {3}",
+      msgDoneFull: "全量完成：{0} 來源 · 新增 {1} 筆 · 明細 {2} / 彙總 {3}",
+      msgDedup: " · 去重 {0} 筆",
+      msgInfoBar: "明細 {0} / 彙總 {1} 組 · 上次同步：{2}",
+      msgLastSync: "上次同步: {0}",
+      msgNoKeys: "暫無含 keyID 的資料，請先擷取 network 明細",
+      msgKeyRefreshing: "更新 API key 名稱中…",
+      msgKeyRefreshed: "已更新 {0} 個 API key 名稱",
+      msgExportEmpty: "所選區間無資料",
+      msgNoSheetjs: "SheetJS 未載入，請使用 CSV",
+      msgExportDone: "已匯出：明細 {0} 筆 · 彙總 {1} 組 · {2} ~ {3}",
+      msgError: "錯誤: {0}",
+      msgNone: "無",
+    },
   }
 
   function detectLang() {
     const saved = loadSettings().lang
     if (saved && LOCALES[saved]) return saved
     const nav = (navigator.language || "").toLowerCase()
+    if (nav.startsWith("zh-tw") || nav.startsWith("zh-hk") || nav.startsWith("zh-hant")) return "zh-tw"
     if (nav.startsWith("zh")) return "zh"
     if (nav.startsWith("ja")) return "ja"
     return "en"
@@ -1633,7 +1719,8 @@
             <span>${t("settingLang")}</span>
             <div class="oc-settings-radios">
               <label><input type="radio" name="oc-lang" value="" />${t("settingLangAuto")}</label>
-              <label><input type="radio" name="oc-lang" value="zh" />中文</label>
+              <label><input type="radio" name="oc-lang" value="zh" />简体</label>
+              <label><input type="radio" name="oc-lang" value="zh-tw" />繁體</label>
               <label><input type="radio" name="oc-lang" value="en" />English</label>
               <label><input type="radio" name="oc-lang" value="ja" />日本語</label>
             </div>
