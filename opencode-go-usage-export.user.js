@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go 用量导出 CSV
 // @namespace    opencode.go-usage-export
-// @version      5.9.0
+// @version      5.9.1
 // @run-at       document-start
 // @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出
 // @match        https://opencode.ai/workspace/*/usage
@@ -41,8 +41,8 @@
   const LOCALES = {
     zh: {
       // panel / head
-      panelTitle: "Go 用量导出",
-      toggleOpen: "展开 Go 用量导出",
+      panelTitle: "OpenCode Go 用量导出",
+      toggleOpen: "展开 OpenCode Go 用量导出",
       toggleClose: "收起面板",
       btnExpandCompact: "切换紧凑模式",
       btnExpandLarge: "切换大窗口",
@@ -136,8 +136,8 @@
       msgNone: "无",
     },
     en: {
-      panelTitle: "Go Usage",
-      toggleOpen: "Open Go Usage",
+      panelTitle: "OpenCode Go Usage",
+      toggleOpen: "Open OpenCode Go Usage",
       toggleClose: "Hide panel",
       btnExpandCompact: "Compact view",
       btnExpandLarge: "Expanded view",
@@ -225,8 +225,8 @@
       msgNone: "—",
     },
     ja: {
-      panelTitle: "Go 利用状況",
-      toggleOpen: "Go 利用状況を開く",
+      panelTitle: "OpenCode Go 利用状況",
+      toggleOpen: "OpenCode Go 利用状況を開く",
       toggleClose: "閉じる",
       btnExpandCompact: "コンパクト表示",
       btnExpandLarge: "広い表示",
@@ -314,8 +314,8 @@
       msgNone: "—",
     },
     "zh-tw": {
-      panelTitle: "Go 用量匯出",
-      toggleOpen: "展開用量面板",
+      panelTitle: "OpenCode Go 用量匯出",
+      toggleOpen: "展開 OpenCode Go 用量面板",
       toggleClose: "收合面板",
       btnExpandCompact: "切換為緊湊模式",
       btnExpandLarge: "切換為寬螢幕模式",

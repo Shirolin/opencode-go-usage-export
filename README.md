@@ -65,6 +65,7 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 
 ## 版本历史
 
+- **v5.9.1**：项目更名 `opencode-go-usage-export`，面板标题统一加 OpenCode 前缀
 - **v5.6**：大窗口居中弹窗、统一设置面板
 - **v5.5**：API key 名称更新、手动导出区间筛选
 - **v5**：分层存储（30 天明细 + 永久聚合）、防卡死（停滞检测 + 超时护栏）、自动迁移 v4 缓存
