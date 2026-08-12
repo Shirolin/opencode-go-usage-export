@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         OpenCode Go 用量导出 CSV
 // @namespace    opencode.go-usage-export
-// @version      5.9.1
+// @version      5.10.0
 // @run-at       document-start
-// @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出
+// @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出。⚠ 请仅从官方 GitHub (github.com/Shirolin/opencode-go-usage-export) 获取本脚本，未知来源修改版可能窃取 API Key
 // @match        https://opencode.ai/workspace/*/usage
 // @match        https://opencode.ai/*/workspace/*/usage
 // @require      https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
@@ -23,6 +23,8 @@
   const SET_KEY = "oc-go-usage-auto"
   const SETTINGS_KEY = "oc-go-export-settings-v1"
   const PANEL_OPEN_KEY = "oc-go-export-open"
+  const SEC_WARN_KEY = "oc-go-export-warned-v1"
+  const SEC_WARN_URL = "https://github.com/Shirolin/opencode-go-usage-export"
   const DEFAULT_SETTINGS = {
     displayMode: "compact",
     autoSync: true,
@@ -134,6 +136,12 @@
       msgError: "出错: {0}",
       msgTimeout: "操作超时（10 分钟）",
       msgNone: "无",
+      securityWarnTitle: "安全提示",
+      securityWarnBody:
+        "本脚本会直接访问 OpenCode 后台接口（含你的登录会话与 API Key 相关数据）。请仅从官方仓库安装：github.com/Shirolin/opencode-go-usage-export（公开开源，可审计代码）。来路不明的修改版可能窃取你的 API Key、用量数据甚至账号会话——安装前请核对来源。",
+      securityWarnOk: "我知道了，不再提示",
+      securityWarnRepo: "查看官方仓库",
+      securityNote: "安全：仅使用官方版本 github.com/Shirolin/opencode-go-usage-export；本脚本可访问后台数据，未知来源修改版有泄露 API Key 风险",
     },
     en: {
       panelTitle: "OpenCode Go Usage",
@@ -223,6 +231,13 @@
       msgError: "Error: {0}",
       msgTimeout: "Operation timed out (10 min)",
       msgNone: "—",
+      securityWarnTitle: "Security notice",
+      securityWarnBody:
+        "This script directly accesses OpenCode backend APIs, including your signed-in session and API-key related data. Install only from the official repository: github.com/Shirolin/opencode-go-usage-export (public, open source, auditable). Modified copies from unknown sources may steal your API keys, usage data, or account session — verify the source before installing.",
+      securityWarnOk: "Got it — don't show again",
+      securityWarnRepo: "Open official repo",
+      securityNote:
+        "Security: use only the official version github.com/Shirolin/opencode-go-usage-export; this script can access backend data — modified copies from unknown sources risk leaking your API keys",
     },
     ja: {
       panelTitle: "OpenCode Go 利用状況",
@@ -312,6 +327,13 @@
       msgError: "エラー: {0}",
       msgTimeout: "操作がタイムアウトしました（10分）",
       msgNone: "—",
+      securityWarnTitle: "セキュリティ注意",
+      securityWarnBody:
+        "このスクリプトは OpenCode のバックエンド API に直接アクセスします（ログインセッションや API キー関連データを含む）。公式リポジトリからのみインストールしてください：github.com/Shirolin/opencode-go-usage-export（公開・オープンソース・監査可能）。出所不明の改変版は API キーや利用データ、アカウントセッションを窃取する恐れがあります。インストール前に入手元を確認してください。",
+      securityWarnOk: "了解しました（今後表示しない）",
+      securityWarnRepo: "公式リポジトリを開く",
+      securityNote:
+        "セキュリティ：公式バージョン github.com/Shirolin/opencode-go-usage-export のみを使用してください。本スクリプトはバックエンドデータにアクセスするため、出所不明の改変版は API キー漏洩のリスクがあります",
     },
     "zh-tw": {
       panelTitle: "OpenCode Go 用量匯出",
@@ -401,6 +423,13 @@
       msgError: "錯誤：{0}",
       msgTimeout: "操作逾時（10 分鐘）",
       msgNone: "—",
+      securityWarnTitle: "安全提示",
+      securityWarnBody:
+        "本腳本會直接存取 OpenCode 後端 API（含你的登入工作階段與 API Key 相關資料）。請僅從官方儲存庫安裝：github.com/Shirolin/opencode-go-usage-export（公開・開源・可審計）。來路不明的修改版可能竊取你的 API Key、用量資料甚至帳號工作階段——安裝前請核對來源。",
+      securityWarnOk: "我知道了，不再提示",
+      securityWarnRepo: "查看官方儲存庫",
+      securityNote:
+        "安全：僅使用官方版本 github.com/Shirolin/opencode-go-usage-export；本腳本可存取後端資料，未知來源修改版有洩漏 API Key 風險",
     },
   }
 
@@ -1823,6 +1852,12 @@
 .oc-plan-key{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .oc-plan-meta{display:flex;gap:8px;flex-shrink:0;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
 .oc-panel-foot{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:#555}
+.oc-security-note{margin:10px 12px;padding:10px 12px;background:rgba(232,76,61,.08);border:1px solid rgba(232,76,61,.35);border-radius:8px;font-size:11px;color:#f0d9d6;line-height:1.6}
+.oc-security-title{font-size:11px;font-weight:700;color:#f88;margin-bottom:4px}
+.oc-security-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.oc-security-actions button{padding:5px 10px;font-size:11px;font-weight:600;color:#fff;background:#2a2a2a;border:1px solid rgba(255,255,255,.12);border-radius:6px;cursor:pointer;font-family:inherit}
+.oc-security-actions button:hover{background:#363636}
+.oc-settings-security{margin-top:10px;padding:8px 10px;background:rgba(232,76,61,.06);border-radius:6px;font-size:10px;color:#c9a9a5;line-height:1.5;word-break:break-all}
 @media(max-width:640px){#oc-go-export-root{bottom:14px;right:14px}#oc-go-export-root.oc-mode-compact #oc-go-export-drawer{width:min(300px,calc(100vw - 28px))}#oc-go-export-root.oc-mode-large #oc-go-export-drawer{width:min(780px,calc(100vw - 24px))}.oc-mode-large .oc-stat-grid{grid-template-columns:1fr 1fr}.oc-mode-large .oc-dim-grid{grid-template-columns:1fr}}`
   }
 
@@ -1979,6 +2014,7 @@
           </div>
         </details>
         <div class="oc-settings-meta" id="oc-set-meta"></div>
+        <div class="oc-settings-security">${t("securityNote")}</div>
       </div>`
 
     const mkBtn = (label, primary) => {
@@ -2037,6 +2073,34 @@
     const bodyWrap = document.createElement("div")
     bodyWrap.id = "oc-go-export-body-wrap"
     bodyWrap.append(sidebar, body)
+
+    // 一次性安全提示：仅首次打开显示，点击「我知道了」后不再出现（不打断日常使用）
+    if (!localStorage.getItem(SEC_WARN_KEY)) {
+      const sec = document.createElement("div")
+      sec.className = "oc-security-note"
+      const secTitle = document.createElement("div")
+      secTitle.className = "oc-security-title"
+      secTitle.textContent = t("securityWarnTitle")
+      const secBody = document.createElement("div")
+      secBody.textContent = t("securityWarnBody")
+      const secRow = document.createElement("div")
+      secRow.className = "oc-security-actions"
+      const btnRepo = document.createElement("button")
+      btnRepo.type = "button"
+      btnRepo.textContent = t("securityWarnRepo")
+      btnRepo.addEventListener("click", () => window.open(SEC_WARN_URL, "_blank", "noopener"))
+      const btnOk = document.createElement("button")
+      btnOk.type = "button"
+      btnOk.className = "oc-primary"
+      btnOk.textContent = t("securityWarnOk")
+      btnOk.addEventListener("click", () => {
+        localStorage.setItem(SEC_WARN_KEY, "1")
+        sec.remove()
+      })
+      secRow.append(btnRepo, btnOk)
+      sec.append(secTitle, secBody, secRow)
+      drawer.insertBefore(sec, drawer.firstChild)
+    }
 
     drawer.append(head, bodyWrap)
     root.append(backdrop, drawer, toggle)

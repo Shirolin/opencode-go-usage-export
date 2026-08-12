@@ -17,6 +17,15 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 - **导出**：手动导出 CSV / Excel，支持日期区间筛选
 - **缓存自动清理**：30 天未访问的旧 workspace 记录自动删除
 
+## 安全提示
+
+> **请仅从官方仓库获取本脚本**：<https://github.com/Shirolin/opencode-go-usage-export>（公开、开源，代码可审计）。
+
+本脚本会直接访问 OpenCode 后台接口，涉及你的登录会话与 API Key 相关数据。Tampermonkey 安装页会展示完整脚本代码，**安装前请核对来源**——来路不明的修改版可能窃取你的 API Key、用量数据甚至账号会话。
+
+- 安装后首次打开面板会显示一次性安全提示（点击「我知道了」后不再出现），设置区底部有常驻来源提醒
+- 核对版本：对比 Tampermonkey 中脚本的 `@version` 与本仓库最新版本号是否一致
+
 ## 安装
 
 1. 浏览器安装 Tampermonkey
@@ -65,6 +74,7 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 
 ## 版本历史
 
+- **v5.10**：安全提示——安装页/README 声明仅官方来源可用，首次打开面板一次性警告（可关闭），设置区常驻来源提醒；区间筛选统一 UTC 日界；修复去重塌缩丢数据、面板 XSS、CSV CR 行断裂、大明细 spread 溢出
 - **v5.9.1**：项目更名 `opencode-go-usage-export`，面板标题统一加 OpenCode 前缀
 - **v5.6**：大窗口居中弹窗、统一设置面板
 - **v5.5**：API key 名称更新、手动导出区间筛选
