@@ -1,0 +1,88 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 语法检查
+        run: node --check opencode-go-usage-export.user.js
+      - name: 数据管线等价性（基线哈希）
+        run: node bench/verify.js
+      - name: 回归脚本
+        run: |
+          for f in bench/repro-*.js; do
+            echo "== $f =="
+            node "$f"
+          done
+
+  version-guard:
+    # 仅 main 推送：user.js 变更时必须递增 @version（Tampermonkey/GF 更新链路依赖版本号）
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: check
+        run: |
+          VERSION=$(grep -m1 '@version' opencode-go-usage-export.user.js | sed 's/.*@version[ ]*//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git diff --quiet HEAD^ HEAD -- opencode-go-usage-export.user.js; then
+            echo "user.js 未变更，跳过发布检查"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            OLD=$(git show HEAD^:opencode-go-usage-export.user.js | grep -m1 '@version' | sed 's/.*@version[ ]*//')
+            node -e '
+              const [oldV, newV] = process.argv.slice(1)
+              const k = (s) => s.split(".").map(Number)
+              const a = k(oldV), b = k(newV)
+              for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                const x = a[i] || 0, y = b[i] || 0
+                if (y < x) { console.error("版本号未递增：" + oldV + " -> " + newV); process.exit(1) }
+                if (y > x) { console.log("版本号 " + oldV + " -> " + newV + " ✓"); process.exit(0) }
+              }
+              console.error("版本号未变化：" + oldV + " -> " + newV)
+              process.exit(1)
+            ' "$OLD" "$VERSION"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    # user.js 版本递增时自动创建 GitHub Release 并附带 .user.js
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, version-guard]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ needs.version-guard.outputs.version }}"
+          CHANGED="${{ needs.version-guard.outputs.changed }}"
+          if [ "$CHANGED" != "true" ]; then echo "版本未变更，跳过 Release"; exit 0; fi
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG 已存在，跳过"; exit 0; fi
+          gh release create "$TAG" opencode-go-usage-export.user.js \
+            --title "OpenCode Go Usage Export v$VERSION" \
+            --notes "从官方 GitHub 仓库发布的 v$VERSION。
+
+- 安装后通过 @updateURL 自动更新（Tampermonkey）
+- Greasy Fork：https://greasyfork.org/scripts/591009-opencode-go-usage-export
+- 请仅从官方渠道获取，未知来源修改版可能窃取 API Key"
