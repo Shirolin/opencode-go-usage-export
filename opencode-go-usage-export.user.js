@@ -1008,7 +1008,7 @@
   }
 
   // ---------- DOM 兜底 ----------
-  const domKey = (r) => (r.timeCreated ? `t:${r.timeCreated}:${r.sessionID || ""}` : `c:${r.date}|${r.model}|${r.inputTotal}|${r.outputTotal}`)
+  const domKey = (r) => (r.timeCreated ? `t:${r.timeCreated}:${r.sessionID || ""}` : `c:${r.model || ""}|${r.sessionID || ""}|${r.inputTokens ?? ""}|${r.outputTokens ?? ""}`)
   async function readCell(cell) {
     const wrap = cell ? $q('[data-slot="tokens-with-breakdown"]', cell) : null
     if (!wrap) return { total: 0, comps: [] }
@@ -1271,7 +1271,7 @@
       if (v == null) return ""
       if (typeof v === "number") return String(v)
       v = String(v)
-      return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+      return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
     }
     return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n")
   }
@@ -1391,6 +1391,19 @@
   }
   const mergedAggs = (detail, summary, sumKey, detKey) => mergeAgg(sumAggregate(summary, sumKey), aggregate(detail, detKey))
 
+  // 明细最大时间戳：循环实现，避免大数组 spread 触发调用栈溢出（RangeError）
+  function maxTimeCreated(rows) {
+    let max = 0
+    for (const r of rows) {
+      const t = r.timeCreated || 0
+      if (t > max) max = t
+    }
+    return max
+  }
+
+  // HTML 转义：面板渲染服务端/用户数据时使用，防标签注入（XSS）
+  const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+
   // 面板统计的纯数值计算（renderPanel 消费）：单遍成本窗口、循环极值，避免多趟 filter/spread
   function computePanelStats(detail, summary, keyNames, settings, now) {
     const sumF = (list, f) => list.reduce((a, r) => a + (r[f] ?? 0), 0)
@@ -1465,7 +1478,7 @@
     const wsData = await getWorkspaceData()
     const now = Date.now()
     const cutoff = now - WINDOW_MS
-    const maxStored = Math.max(0, ...wsData.detail.map((r) => r.timeCreated || 0))
+    const maxStored = maxTimeCreated(wsData.detail)
     const mergedMap = new Map(wsData.detail.map((r) => [keyOf(r), r]))
 
     let rows, source
@@ -1542,7 +1555,7 @@
     const barRow = (label, cost, maxCost, secondary = "") =>
       `<div class="oc-bar-row">
         <div class="oc-bar-meta">
-          <span class="oc-bar-label" title="${String(label).replace(/"/g, "&quot;")}">${label}</span>
+          <span class="oc-bar-label" title="${escHtml(label)}">${escHtml(label)}</span>
           <span class="oc-bar-cost">${cost != null ? "$" + cost.toFixed(2) : ""}</span>
         </div>
         <div class="oc-bar-body">
