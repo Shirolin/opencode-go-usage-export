@@ -33,7 +33,7 @@ This script directly accesses OpenCode backend APIs, including your signed-in se
 
 ## Installation
 
-**Option 1: Greasy Fork (recommended)** — visit the script page and click install: <https://greasyfork.org/scripts/…> (filled in after publishing)
+**Option 1: Greasy Fork (recommended)** — visit the script page and click install: <https://greasyfork.org/scripts/591009-opencode-go-用量导出>
 
 **Option 2: Direct from GitHub** — open [opencode-go-usage-export.user.js](https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js) in your browser; Tampermonkey will show the install confirmation.
 

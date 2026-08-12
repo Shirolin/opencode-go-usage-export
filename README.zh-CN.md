@@ -33,7 +33,7 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 
 ## 安装
 
-**方式一：Greasy Fork（推荐）** —— 访问脚本主页点击安装：<https://greasyfork.org/scripts/…>（发布后填充）
+**方式一：Greasy Fork（推荐）** —— 访问脚本主页点击安装：<https://greasyfork.org/scripts/591009-opencode-go-用量导出>
 
 **方式二：GitHub 直装** —— 浏览器打开 [opencode-go-usage-export.user.js](https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js)，Tampermonkey 会弹出安装确认。
 
