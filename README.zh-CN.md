@@ -1,0 +1,102 @@
+# OpenCode Go 用量导出
+
+[English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
+
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+
+Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usage 页的 Go 订阅用量统计，含 token 细分（cache read / reasoning）、按模型 / API key / plan / 日期聚合，支持 CSV + Excel 导出。
+
+## 功能
+
+- **网络层抓取**：拦截并重放控制台的服务端请求，直接拿原始 JSON（含精确时间戳、keyID、plan），比 DOM 抓取快几十倍
+- **分层存储（IndexedDB）**：明细只保留最近 30 天，更早数据按「日期 × 模型 × plan × key」聚合后长期保留，杜绝无限膨胀
+- **全量 / 增量抓取**：增量按精确时间戳早停，只拉新增请求
+- **断点续传**：每页抓完即落盘，中断后可继续
+- **顺序拉页 + 重试**：默认 350ms 间隔，失败自动重试，带停滞检测防死循环
+- **自动同步**：打开页面距上次同步超过 6 小时自动增量（不下载文件），可在设置中开关
+- **页面内统计面板**：总量、近 30 天成本、Go 限额对比（5h/$12 · 7d/$30 · 30d/$60）、按模型 / key / plan 条形图
+- **大窗口模式**：居中弹窗（720px），更适合浏览统计和维度分析
+- **设置面板**：显示模式、自动同步、导出默认值、面板折叠、拉页间隔、排行数量等
+- **API key 名称**：手动更新 key 名称，面板和导出中显示友好标签
+- **导出**：手动导出 CSV / Excel，支持日期区间筛选
+- **缓存自动清理**：30 天未访问的旧 workspace 记录自动删除
+
+## 安全提示
+
+> **请仅从官方仓库获取本脚本**：<https://github.com/Shirolin/opencode-go-usage-export>（公开、开源，代码可审计）。
+
+本脚本会直接访问 OpenCode 后台接口，涉及你的登录会话与 API Key 相关数据。Tampermonkey 安装页会展示完整脚本代码，**安装前请核对来源**——来路不明的修改版可能窃取你的 API Key、用量数据甚至账号会话。
+
+- 安装后首次打开面板会显示一次性安全提示（点击「我知道了」后不再出现），设置区底部有常驻来源提醒
+- 核对版本：对比 Tampermonkey 中脚本的 `@version` 与本仓库最新版本号是否一致
+
+## 安装
+
+1. 浏览器安装 Tampermonkey
+2. 新建脚本，粘贴 [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js) 内容，保存
+3. 打开 `https://opencode.ai/workspace/<workspace-id>/usage`（需已登录）
+4. 右下角 **Go** 按钮打开面板
+
+## 使用
+
+| 按钮 / 功能 | 行为 |
+|---|---|
+| 全量抓取 | 从头拉全部页，合并去重，写入缓存 |
+| 增量抓取 | 只拉新增请求（早停），合并去重 |
+| 刷新面板 | 用缓存重新渲染统计面板 |
+| 更新 key 名称 | 从 API 密钥接口拉取名称并缓存 |
+| 导出 CSV / Excel | 按所选日期区间手动导出 |
+| 清空缓存 | 删除当前 workspace 缓存 |
+| ⤢ 大窗口 | 切换紧凑抽屉 / 居中弹窗 |
+| ⚙ 设置 | 展开设置区，配置显示、同步、导出等 |
+
+数据源说明：优先使用网络层原始 JSON（`source=network`）；若接口捕获失败，自动降级为 DOM 抓取（`source=dom`，较慢，无 keyID/plan）。
+
+## 设置项
+
+设置保存在 `localStorage`（`oc-go-export-settings-v1`）：
+
+- **显示模式**：紧凑（右下角抽屉）/ 大窗口（居中弹窗）
+- **点击外部关闭**：开/关
+- **自动同步**：>6h 自动增量
+- **导出默认日期**：近7天 / 近30天 / 全部
+- **面板默认展开**：概览、维度分析、导出区
+- **高级**：拉页间隔（250/350/500ms）、模型/key 排行数量
+
+## 数据存储
+
+- IndexedDB：`oc-go-usage-export-v5` 库，`workspaces` 表按 workspace ID 存储
+- 明细（detail）：近 30 天原始请求
+- 汇总（summary）：窗口外数据聚合，长期保留
+- keyNames：API key ID → 显示名称映射
+
+## 注意
+
+- 脚本依赖控制台**未公开**的内部接口，控制台改版可能随时失效；失效时自动降级 DOM 抓取
+- 面板限额对比仅基于已缓存明细（近 30 天），非权威数据
+- 需要精确审计请定期手动「全量抓取」并保留下载的 CSV
+
+## 版本历史
+
+- **v5.10**：安全提示——安装页/README 声明仅官方来源可用，首次打开面板一次性警告（可关闭），设置区常驻来源提醒；区间筛选统一 UTC 日界；修复去重塌缩丢数据、面板 XSS、CSV CR 行断裂、大明细 spread 溢出
+- **v5.9.1**：项目更名 `opencode-go-usage-export`，面板标题统一加 OpenCode 前缀
+- **v5.6**：大窗口居中弹窗、统一设置面板
+- **v5.5**：API key 名称更新、手动导出区间筛选
+- **v5**：分层存储（30 天明细 + 永久聚合）、防卡死（停滞检测 + 超时护栏）、自动迁移 v4 缓存
+- **v4**：并发拉页 + 重试、自动同步、按 keyID/plan 维度、Excel 导出、恢复分页状态
+- **v3**：网络层拦截原始 JSON、增量时间戳早停、断点续传、IndexedDB 存储
+- **v2**：增量抓取、localStorage 缓存去重
+- **v1**：DOM 抓取导出 CSV
+
+## 许可证
+
+[GNU General Public License v3.0](LICENSE) — 自由软件：可自由分发与修改，但修改版必须同样以 GPL-3.0 开源。详见 [LICENSE](./LICENSE)。
+
+Copyright (C) 2026 Shirolin
+
+## 赞助与支持
+
+如果你觉得本项目提升了你的 OpenCode 用量统计体验，欢迎支持开发者的持续维护：
+
+- ❤️ **爱发电 (Afdian)**：[https://ifdian.net/a/shirolin](https://ifdian.net/a/shirolin)
+- ☕ **Ko-fi**：[https://ko-fi.com/shirolin](https://ko-fi.com/shirolin)

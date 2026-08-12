@@ -1,102 +1,102 @@
-# OpenCode Go 用量导出
+[English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
-[简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
+# OpenCode Go Usage Export
 
 ![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
-Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usage 页的 Go 订阅用量统计，含 token 细分（cache read / reasoning）、按模型 / API key / plan / 日期聚合，支持 CSV + Excel 导出。
+A Tampermonkey userscript that exports Go subscription usage statistics from the [OpenCode console](https://opencode.ai) Usage page — token breakdown (cache read / reasoning), aggregated by model / API key / plan / date, with CSV + Excel export.
 
-## 功能
+## Features
 
-- **网络层抓取**：拦截并重放控制台的服务端请求，直接拿原始 JSON（含精确时间戳、keyID、plan），比 DOM 抓取快几十倍
-- **分层存储（IndexedDB）**：明细只保留最近 30 天，更早数据按「日期 × 模型 × plan × key」聚合后长期保留，杜绝无限膨胀
-- **全量 / 增量抓取**：增量按精确时间戳早停，只拉新增请求
-- **断点续传**：每页抓完即落盘，中断后可继续
-- **顺序拉页 + 重试**：默认 350ms 间隔，失败自动重试，带停滞检测防死循环
-- **自动同步**：打开页面距上次同步超过 6 小时自动增量（不下载文件），可在设置中开关
-- **页面内统计面板**：总量、近 30 天成本、Go 限额对比（5h/$12 · 7d/$30 · 30d/$60）、按模型 / key / plan 条形图
-- **大窗口模式**：居中弹窗（720px），更适合浏览统计和维度分析
-- **设置面板**：显示模式、自动同步、导出默认值、面板折叠、拉页间隔、排行数量等
-- **API key 名称**：手动更新 key 名称，面板和导出中显示友好标签
-- **导出**：手动导出 CSV / Excel，支持日期区间筛选
-- **缓存自动清理**：30 天未访问的旧 workspace 记录自动删除
+- **Network-layer capture**: intercepts and replays the console's server requests to get raw JSON (exact timestamps, keyID, plan) — tens of times faster than DOM scraping
+- **Tiered storage (IndexedDB)**: detail rows kept for the last 30 days; older data aggregated by date × model × plan × key and retained long-term — no unbounded growth
+- **Full / incremental sync**: incremental sync early-stops at the exact timestamp, fetching only new requests
+- **Resume from checkpoint**: every page is persisted as it is fetched; an interrupted sync can continue where it left off
+- **Sequential paging + retry**: default 350 ms gap, automatic retries, stall detection to avoid infinite loops
+- **Auto-sync**: automatically runs an incremental sync when the page is opened more than 6 h after the last sync (no file download); toggleable in settings
+- **In-page stats panel**: totals, last-30-day cost, Go quota comparison (5h/$12 · 7d/$30 · 30d/$60), bar charts by model / key / plan
+- **Wide-window mode**: centered dialog (720px), better for browsing statistics and breakdowns
+- **Settings panel**: display mode, auto-sync, export defaults, panel folding, paging interval, top-N counts, etc.
+- **API key names**: manually refresh key names; friendly labels in the panel and in exports
+- **Export**: manual CSV / Excel export with date-range filtering
+- **Automatic cache cleanup**: workspace records not accessed for 30 days are deleted automatically
 
-## 安全提示
+## Security notice
 
-> **请仅从官方仓库获取本脚本**：<https://github.com/Shirolin/opencode-go-usage-export>（公开、开源，代码可审计）。
+> **Install this script only from the official repository**: <https://github.com/Shirolin/opencode-go-usage-export> (public, open source, auditable).
 
-本脚本会直接访问 OpenCode 后台接口，涉及你的登录会话与 API Key 相关数据。Tampermonkey 安装页会展示完整脚本代码，**安装前请核对来源**——来路不明的修改版可能窃取你的 API Key、用量数据甚至账号会话。
+This script directly accesses OpenCode backend APIs, including your signed-in session and API-key related data. Tampermonkey shows the full script code on the install page — **verify the source before installing**. Modified copies from unknown sources may steal your API keys, usage data, or account session.
 
-- 安装后首次打开面板会显示一次性安全提示（点击「我知道了」后不再出现），设置区底部有常驻来源提醒
-- 核对版本：对比 Tampermonkey 中脚本的 `@version` 与本仓库最新版本号是否一致
+- The panel shows a one-time security notice on first open (dismissible; never shown again), and a persistent source reminder at the bottom of the settings
+- Verify the version: compare the script's `@version` in Tampermonkey with the latest version in this repository
 
-## 安装
+## Installation
 
-1. 浏览器安装 Tampermonkey
-2. 新建脚本，粘贴 [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js) 内容，保存
-3. 打开 `https://opencode.ai/workspace/<workspace-id>/usage`（需已登录）
-4. 右下角 **Go** 按钮打开面板
+1. Install Tampermonkey in your browser
+2. Create a new script, paste the contents of [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js), and save
+3. Open `https://opencode.ai/workspace/<workspace-id>/usage` (must be signed in)
+4. Click the **Go** button at the bottom-right to open the panel
 
-## 使用
+## Usage
 
-| 按钮 / 功能 | 行为 |
+| Button / feature | Behavior |
 |---|---|
-| 全量抓取 | 从头拉全部页，合并去重，写入缓存 |
-| 增量抓取 | 只拉新增请求（早停），合并去重 |
-| 刷新面板 | 用缓存重新渲染统计面板 |
-| 更新 key 名称 | 从 API 密钥接口拉取名称并缓存 |
-| 导出 CSV / Excel | 按所选日期区间手动导出 |
-| 清空缓存 | 删除当前 workspace 缓存 |
-| ⤢ 大窗口 | 切换紧凑抽屉 / 居中弹窗 |
-| ⚙ 设置 | 展开设置区，配置显示、同步、导出等 |
+| Full sync | Fetch all pages from the start, merge and deduplicate, write to cache |
+| Sync new | Fetch only new requests (early stop), merge and deduplicate |
+| Refresh | Re-render the stats panel from cache |
+| Update key names | Pull key names from the API-key endpoint and cache them |
+| Export CSV / Excel | Manual export for the selected date range |
+| Clear data | Delete the current workspace cache |
+| ⤢ Wide window | Toggle between compact drawer / centered dialog |
+| ⚙ Settings | Expand settings: display, sync, export, etc. |
 
-数据源说明：优先使用网络层原始 JSON（`source=network`）；若接口捕获失败，自动降级为 DOM 抓取（`source=dom`，较慢，无 keyID/plan）。
+Data source: prefers raw network JSON (`source=network`); falls back to DOM scraping automatically if interception fails (`source=dom`, slower, no keyID/plan).
 
-## 设置项
+## Settings
 
-设置保存在 `localStorage`（`oc-go-export-settings-v1`）：
+Stored in `localStorage` (`oc-go-export-settings-v1`):
 
-- **显示模式**：紧凑（右下角抽屉）/ 大窗口（居中弹窗）
-- **点击外部关闭**：开/关
-- **自动同步**：>6h 自动增量
-- **导出默认日期**：近7天 / 近30天 / 全部
-- **面板默认展开**：概览、维度分析、导出区
-- **高级**：拉页间隔（250/350/500ms）、模型/key 排行数量
+- **Display mode**: compact (bottom-right drawer) / wide (centered dialog)
+- **Click outside to close**: on / off
+- **Auto-sync**: incremental sync after >6 h
+- **Default export range**: last 7 days / last 30 days / all
+- **Panel sections open by default**: overview, breakdowns, export
+- **Advanced**: paging interval (250/350/500 ms), top-N model/key counts
 
-## 数据存储
+## Data storage
 
-- IndexedDB：`oc-go-usage-export-v5` 库，`workspaces` 表按 workspace ID 存储
-- 明细（detail）：近 30 天原始请求
-- 汇总（summary）：窗口外数据聚合，长期保留
-- keyNames：API key ID → 显示名称映射
+- IndexedDB: database `oc-go-usage-export-v5`, table `workspaces` keyed by workspace ID
+- detail: raw requests from the last 30 days
+- summary: aggregated data outside the window, retained long-term
+- keyNames: API key ID → display name mapping
 
-## 注意
+## Notes
 
-- 脚本依赖控制台**未公开**的内部接口，控制台改版可能随时失效；失效时自动降级 DOM 抓取
-- 面板限额对比仅基于已缓存明细（近 30 天），非权威数据
-- 需要精确审计请定期手动「全量抓取」并保留下载的 CSV
+- The script depends on the console's **undocumented** internal APIs; they may change at any time — it falls back to DOM scraping automatically
+- Quota comparison in the panel is based only on cached detail (last 30 days), not authoritative
+- For accurate audits, run a manual "Full sync" regularly and keep the downloaded CSVs
 
-## 版本历史
+## Changelog
 
-- **v5.10**：安全提示——安装页/README 声明仅官方来源可用，首次打开面板一次性警告（可关闭），设置区常驻来源提醒；区间筛选统一 UTC 日界；修复去重塌缩丢数据、面板 XSS、CSV CR 行断裂、大明细 spread 溢出
-- **v5.9.1**：项目更名 `opencode-go-usage-export`，面板标题统一加 OpenCode 前缀
-- **v5.6**：大窗口居中弹窗、统一设置面板
-- **v5.5**：API key 名称更新、手动导出区间筛选
-- **v5**：分层存储（30 天明细 + 永久聚合）、防卡死（停滞检测 + 超时护栏）、自动迁移 v4 缓存
-- **v4**：并发拉页 + 重试、自动同步、按 keyID/plan 维度、Excel 导出、恢复分页状态
-- **v3**：网络层拦截原始 JSON、增量时间戳早停、断点续传、IndexedDB 存储
-- **v2**：增量抓取、localStorage 缓存去重
-- **v1**：DOM 抓取导出 CSV
+- **v5.10**: security notice — install page/README state official-source-only; one-time panel warning on first open (dismissible); persistent source reminder in settings; UTC day boundaries for range filtering; fixed dedupe collapse (silent data loss), panel XSS, CSV CR line breaks, and spread stack overflow on large datasets
+- **v5.9.1**: renamed to `opencode-go-usage-export`; unified OpenCode prefix in panel titles
+- **v5.6**: wide-window centered dialog; unified settings panel
+- **v5.5**: API key name updates; manual export date-range filtering
+- **v5**: tiered storage (30-day detail + permanent aggregates); stall/timeout guards; automatic v4 cache migration
+- **v4**: concurrent paging + retry; auto-sync; keyID/plan dimensions; Excel export; pagination state restore
+- **v3**: network-layer raw JSON interception; incremental timestamp early stop; resume from checkpoint; IndexedDB storage
+- **v2**: incremental sync; localStorage cache deduplication
+- **v1**: DOM-scraping CSV export
 
-## 许可证
+## License
 
-[GNU General Public License v3.0](LICENSE) — 自由软件：可自由分发与修改，但修改版必须同样以 GPL-3.0 开源。详见 [LICENSE](./LICENSE)。
+[GNU General Public License v3.0](LICENSE) — free software: you may redistribute and modify it, but modified versions must also be open-sourced under GPL-3.0. See [LICENSE](./LICENSE) for details.
 
 Copyright (C) 2026 Shirolin
 
-## 赞助与支持
+## Sponsorship & Support
 
-如果你觉得本项目提升了你的 OpenCode 用量统计体验，欢迎支持开发者的持续维护：
+If this project improves your OpenCode usage tracking experience, consider supporting the developer's continued maintenance:
 
-- ❤️ **爱发电 (Afdian)**：[https://ifdian.net/a/shirolin](https://ifdian.net/a/shirolin)
-- ☕ **Ko-fi**：[https://ko-fi.com/shirolin](https://ko-fi.com/shirolin)
+- ❤️ **Afdian (爱发电)**: <https://ifdian.net/a/shirolin>
+- ☕ **Ko-fi**: <https://ko-fi.com/shirolin>
