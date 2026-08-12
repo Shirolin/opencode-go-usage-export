@@ -33,10 +33,13 @@
 
 ## インストール
 
-1. ブラウザに Tampermonkey をインストール
-2. 新規スクリプトを作成し、[opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js) の内容を貼り付けて保存
-3. `https://opencode.ai/workspace/<workspace-id>/usage` を開く（ログイン必須）
-4. 右下の **Go** ボタンでパネルを開く
+**方法 1: Greasy Fork（推奨）** — スクリプトページからインストール: <https://greasyfork.org/scripts/…>（公開後に記入）
+
+**方法 2: GitHub から直接** — [opencode-go-usage-export.user.js](https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js) をブラウザで開くと、Tampermonkey がインストール確認を表示します。
+
+**方法 3: 手動** — 新規スクリプトを作成し、[opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js) の内容を貼り付けて保存。
+
+インストール後、`https://opencode.ai/workspace/<workspace-id>/usage` を開き（ログイン必須）、右下の **Go** ボタンでパネルを開きます。
 
 ## 使い方
 
@@ -80,15 +83,7 @@
 
 ## 変更履歴
 
-- **v5.10**: セキュリティ注意（インストールページ / README で公式ソースのみと明記、初回パネル表示で一度だけ警告・非表示可、設定欄に常時ソース表示）。日付範囲フィルタを UTC 日付境界に統一。重複排除の潰れによるデータ欠落、パネル XSS、CSV の CR 改行崩れ、大規模データでのスプレッドによるスタックオーバーフローを修正
-- **v5.9.1**: プロジェクト名を `opencode-go-usage-export` に変更、パネルタイトルに OpenCode プレフィックスを統一
-- **v5.6**: 大画面中央ダイアログ、設定パネルを統一
-- **v5.5**: API キー名の更新、手動エクスポートの日付範囲フィルタ
-- **v5**: 階層ストレージ（30 日明細 + 恒久集計）、停止検知・タイムアウトガード、v4 キャッシュの自動マイグレーション
-- **v4**: 並列ページ取得 + リトライ、自動同期、keyID / プラン次元、Excel エクスポート、ページネーション状態の復元
-- **v3**: ネットワーク層で生 JSON を傍受、差分のタイムスタンプ早期終了、途中再開、IndexedDB ストレージ
-- **v2**: 差分取得、localStorage キャッシュの重複排除
-- **v1**: DOM スクレイピングによる CSV エクスポート
+- **v1.0.0**: 最初の公開リリース。ネットワーク層での生 JSON 取得、階層ストレージ（30 日明細 + 恒久集計）、全件/差分同期、途中再開、中断可能な同期（停止ボタン / タイムアウト / ページ上限の安全弁）、自動同期、統計パネル、CSV/Excel エクスポート。セキュリティ注意（公式ソースのみ）、UTC 日付境界の統一、重複排除/XSS/CSV の堅牢性修正。（開発期 v5.x の履歴は圧縮）
 
 ## ライセンス
 

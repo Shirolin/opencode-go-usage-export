@@ -33,10 +33,13 @@ Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) 
 
 ## 安裝
 
-1. 瀏覽器安裝 Tampermonkey
-2. 新增腳本，貼上 [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js) 內容，儲存
-3. 開啟 `https://opencode.ai/workspace/<workspace-id>/usage`（需已登入）
-4. 右下角 **Go** 按鈕開啟面板
+**方式一：Greasy Fork（推薦）** —— 造訪腳本主頁點擊安裝：<https://greasyfork.org/scripts/…>（發布後填入）
+
+**方式二：GitHub 直裝** —— 瀏覽器開啟 [opencode-go-usage-export.user.js](https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js)，Tampermonkey 會彈出安裝確認。
+
+**方式三：手動** —— 新增腳本，貼上 [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js) 內容，儲存。
+
+安裝後開啟 `https://opencode.ai/workspace/<workspace-id>/usage`（需已登入），右下角 **Go** 按鈕開啟面板。
 
 ## 使用方式
 
@@ -80,15 +83,7 @@ Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) 
 
 ## 版本歷史
 
-- **v5.10**：安全提示——安裝頁/README 聲明僅官方來源可用，首次開啟面板一次性警告（可關閉），設定區常駐來源提醒；區間篩選統一 UTC 日界；修復去重塌縮丟資料、面板 XSS、CSV CR 行斷裂、大資料 spread 溢位
-- **v5.9.1**：專案更名 `opencode-go-usage-export`，面板標題統一加 OpenCode 前綴
-- **v5.6**：大視窗置中彈窗、統一設定面板
-- **v5.5**：API key 名稱更新、手動匯出區間篩選
-- **v5**：分層儲存（30 天明細 + 永久彙總）、防卡死（停滯偵測 + 逾時防護）、自動遷移 v4 快取
-- **v4**：並發拉頁 + 重試、自動同步、依 keyID/plan 維度、Excel 匯出、恢復分頁狀態
-- **v3**：網路層攔截原始 JSON、增量時間戳早停、斷點續傳、IndexedDB 儲存
-- **v2**：增量同步、localStorage 快取去重
-- **v1**：DOM 抓取匯出 CSV
+- **v1.0.0**：首個公開發布版。功能：網路層擷取原始 JSON、分層儲存（30 天明細 + 永久彙總）、全量/增量同步、斷點續傳、可中斷同步（停止按鈕/逾時/頁數上限兜底）、自動同步、統計面板、CSV/Excel 匯出；安全提示（僅官方來源）、UTC 日界統一、去重/XSS/CSV 健壯性修復。（開發期 v5.x 歷史壓縮）
 
 ## 授權條款
 

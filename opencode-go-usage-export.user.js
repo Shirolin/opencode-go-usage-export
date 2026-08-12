@@ -1,13 +1,18 @@
 // ==UserScript==
-// @name         OpenCode Go 用量导出 CSV
-// @namespace    opencode.go-usage-export
-// @version      5.10.0
+// @name         OpenCode Go 用量导出
+// @namespace    https://github.com/Shirolin/opencode-go-usage-export
+// @version      1.0.0
+// @author       Shirolin
 // @run-at       document-start
-// @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、按 keyID/plan 维度、面板、CSV+Excel 导出。⚠ 请仅从官方 GitHub (github.com/Shirolin/opencode-go-usage-export) 获取本脚本，未知来源修改版可能窃取 API Key
+// @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、可中断抓取、按 keyID/plan 维度、面板、CSV+Excel 导出。⚠ 请仅从官方 GitHub (github.com/Shirolin/opencode-go-usage-export) 获取本脚本，未知来源修改版可能窃取 API Key
 // @match        https://opencode.ai/workspace/*/usage
 // @match        https://opencode.ai/*/workspace/*/usage
 // @require      https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
 // @license      GPL-3.0-or-later
+// @homepageURL  https://github.com/Shirolin/opencode-go-usage-export
+// @supportURL   https://github.com/Shirolin/opencode-go-usage-export/issues
+// @downloadURL  https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js
+// @updateURL    https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js
 // @grant        none
 // ==/UserScript==
 

@@ -33,10 +33,13 @@ This script directly accesses OpenCode backend APIs, including your signed-in se
 
 ## Installation
 
-1. Install Tampermonkey in your browser
-2. Create a new script, paste the contents of [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js), and save
-3. Open `https://opencode.ai/workspace/<workspace-id>/usage` (must be signed in)
-4. Click the **Go** button at the bottom-right to open the panel
+**Option 1: Greasy Fork (recommended)** — visit the script page and click install: <https://greasyfork.org/scripts/…> (filled in after publishing)
+
+**Option 2: Direct from GitHub** — open [opencode-go-usage-export.user.js](https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js) in your browser; Tampermonkey will show the install confirmation.
+
+**Option 3: Manual** — create a new script, paste the contents of [opencode-go-usage-export.user.js](./opencode-go-usage-export.user.js), and save.
+
+After installing, open `https://opencode.ai/workspace/<workspace-id>/usage` (must be signed in) and click the **Go** button at the bottom-right.
 
 ## Usage
 
@@ -80,15 +83,7 @@ Stored in `localStorage` (`oc-go-export-settings-v1`):
 
 ## Changelog
 
-- **v5.10**: security notice — install page/README state official-source-only; one-time panel warning on first open (dismissible); persistent source reminder in settings; UTC day boundaries for range filtering; fixed dedupe collapse (silent data loss), panel XSS, CSV CR line breaks, and spread stack overflow on large datasets
-- **v5.9.1**: renamed to `opencode-go-usage-export`; unified OpenCode prefix in panel titles
-- **v5.6**: wide-window centered dialog; unified settings panel
-- **v5.5**: API key name updates; manual export date-range filtering
-- **v5**: tiered storage (30-day detail + permanent aggregates); stall/timeout guards; automatic v4 cache migration
-- **v4**: concurrent paging + retry; auto-sync; keyID/plan dimensions; Excel export; pagination state restore
-- **v3**: network-layer raw JSON interception; incremental timestamp early stop; resume from checkpoint; IndexedDB storage
-- **v2**: incremental sync; localStorage cache deduplication
-- **v1**: DOM-scraping CSV export
+- **v1.0.0**: first public release. Network-layer raw JSON capture, tiered storage (30-day detail + permanent aggregates), full/incremental sync, resume from checkpoint, interruptible sync (Stop button / timeout / page-cap safety net), auto-sync, stats panel, CSV/Excel export; security notice (official-source-only), unified UTC day boundaries, dedupe/XSS/CSV robustness fixes. (Pre-release v5.x history condensed.)
 
 ## License
 
