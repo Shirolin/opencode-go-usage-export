@@ -33,7 +33,7 @@
 
 ## インストール
 
-**方法 1: Greasy Fork（推奨）** — スクリプトページからインストール: <https://greasyfork.org/scripts/591009-opencode-go-用量导出>
+**方法 1: Greasy Fork（推奨）** — スクリプトページからインストール: <https://greasyfork.org/scripts/591009-opencode-go-usage-export>
 
 **方法 2: GitHub から直接** — [opencode-go-usage-export.user.js](https://raw.githubusercontent.com/Shirolin/opencode-go-usage-export/main/opencode-go-usage-export.user.js) をブラウザで開くと、Tampermonkey がインストール確認を表示します。
 
