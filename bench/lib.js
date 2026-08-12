@@ -73,7 +73,7 @@ function loadApi() {
   if (!windowMs) throw new Error("WINDOW_MS 常量未找到")
   regionB = aggConsts + "\n" + windowMs + "\n" + regionB
   regionA += "\n;globalThis.__apiA = { norm, keyDisplayName, keyLabel, collectKnownKeyIDs, extractApiKeyNames };"
-  regionB += "\n;globalThis.__apiB = { keyOf, dateKey, rollup, aggregate, sumAggregate, mergeAgg, mergedAggs, maxTimeCreated, escHtml, rawRows, toCSV, filterByRange, AGG_FIELDS, AGG_COLS, ...(typeof computePanelStats !== 'undefined' ? { computePanelStats } : {}) };"
+  regionB += "\n;globalThis.__apiB = { keyOf, dateKey, rollup, aggregate, sumAggregate, mergeAgg, mergedAggs, maxTimeCreated, escHtml, rawRows, toCSV, filterByRange, parseDateInput, AGG_FIELDS, AGG_COLS, ...(typeof computePanelStats !== 'undefined' ? { computePanelStats } : {}) };"
   vm.runInContext(regionA, sb, { filename: "user.js#network" })
   vm.runInContext(regionB, sb, { filename: "user.js#dom-agg" })
   return { ...sb.__apiA, ...sb.__apiB }

@@ -1312,9 +1312,11 @@
 
   function parseDateInput(val, endOfDay = false) {
     if (!val) return null
-    const d = new Date(`${val}T00:00:00`)
-    if (endOfDay) d.setHours(23, 59, 59, 999)
-    return d.getTime()
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(val))
+    if (!m) return null
+    const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    // 与 dateKey/汇总键一致采用 UTC 日界：区间筛选、日期标签、汇总口径统一，结果与用户时区无关
+    return endOfDay ? t + 86400000 - 1 : t
   }
 
   const parseDateCache = new Map()
