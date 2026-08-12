@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         OpenCode Go 用量导出
+// @name         OpenCode Go Usage Export
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.0
+// @version      1.0.1
 // @author       Shirolin
 // @run-at       document-start
-// @description  导出 OpenCode 控制台 Usage 的 token 统计。拦截服务端请求拿原始 JSON；分层存储（30 天明细 + 永久聚合），全量/增量、并发拉页+重试、断点续传、自动同步、可中断抓取、按 keyID/plan 维度、面板、CSV+Excel 导出。⚠ 请仅从官方 GitHub (github.com/Shirolin/opencode-go-usage-export) 获取本脚本，未知来源修改版可能窃取 API Key
+// @description  Export OpenCode Go usage from the console — token breakdown (cache read / reasoning), aggregated by model / API key / plan / date, CSV + Excel export. 导出 OpenCode 控制台 Go 订阅用量统计（token 细分、按模型/API key/plan/日期聚合、CSV/Excel 导出）。⚠ Install only from the official GitHub repo (github.com/Shirolin/opencode-go-usage-export) — modified copies from unknown sources may steal your API keys. 请仅从官方 GitHub 获取，未知来源修改版可能窃取 API Key
 // @match        https://opencode.ai/workspace/*/usage
 // @match        https://opencode.ai/*/workspace/*/usage
 // @require      https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
