@@ -1,0 +1,33 @@
+{
+  "runMergeRollup (合并去重+排序+分层)": {
+    "ms": 221.7732,
+    "hash": "63b009b9325eb3578e354d13a9e2d227f994b18046b471b1cea065872ac6a704"
+  },
+  "aggregateDims (4 维聚合)": {
+    "ms": 168.9511,
+    "hash": "89d4e944f0617b5f1f101ca03b8741614f4a628623f960f362a76a18bc7aa762"
+  },
+  "exportCSV (raw+4 维 5 张表)": {
+    "ms": 360.2412,
+    "hash": "3057dd2b3e3ce8afe803d151e024299df2cd818262915445ffca7602a4150c56"
+  },
+  "filterRange (近 7 天区间)": {
+    "ms": 23.0458,
+    "hash": "48f01ab0a954a3c855cc4ae6ef43f9f88def5fe8f89013762773ed404ee7c656"
+  },
+  "panelCompute (面板统计 30d)": {
+    "ms": 54.678,
+    "hash": "2384402fe06a158133ccb31e8fa4b64b9a0dfc160904010234928ea4e8faeef6"
+  },
+  "keyNames (key 名提取)": {
+    "ms": 6.6616,
+    "hash": "d8775479e226ab58b4a22e8786d8b81014091de5703a132c2a9c5368b43caa14"
+  },
+  "__meta__": {
+    "node": "v22.20.0",
+    "srcHash": "5576748dc1d7",
+    "storedDetail": 19554,
+    "summary": 28360,
+    "newRows": 2000
+  }
+}

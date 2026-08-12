@@ -827,12 +827,24 @@
     return keyID ? keyNames?.[keyID] || "" : ""
   }
 
+  const keyLabelCache = new WeakMap()
   function keyLabel(keyID, plan = "", keyNames = {}) {
     if (!keyID) return t("keyUnknown")
-    const name = keyDisplayName(keyID, keyNames)
-    const suffix = keyID.slice(-6)
-    const base = name ? `${name} · ${suffix}` : suffix
-    return plan ? `${base} (${plan})` : base
+    let cache = keyLabelCache.get(keyNames)
+    if (!cache) {
+      cache = new Map()
+      keyLabelCache.set(keyNames, cache)
+    }
+    const ck = `${keyID}|${plan || ""}`
+    let label = cache.get(ck)
+    if (label === undefined) {
+      const name = keyDisplayName(keyID, keyNames)
+      const suffix = keyID.slice(-6)
+      const base = name ? `${name} · ${suffix}` : suffix
+      label = plan ? `${base} (${plan})` : base
+      cache.set(ck, label)
+    }
+    return label
   }
 
   function extractApiKeyNames(payload, knownIDs = []) {
@@ -1114,19 +1126,31 @@
 
   // ---------- 聚合 / 分层 ----------
   const keyOf = (r) => (r.timeCreated ? `t:${r.timeCreated}:${r.sessionID || ""}` : domKey(r))
-  const dateKey = (r) => (r.timeCreated ? new Date(r.timeCreated).toISOString().slice(0, 10) : t("dateUnknown"))
-  const summaryKey = (r) => `${dateKey(r)}|${r.model || ""}|${r.plan || ""}|${r.keyID || ""}`
+  // 按 UTC 日桶缓存：同一自然日只格式化一次（输出与 toISOString().slice 完全一致）
+  const dayCache = new Map()
+  const dateKey = (r) => {
+    if (!r.timeCreated) return t("dateUnknown")
+    const day = Math.floor(r.timeCreated / 86400000)
+    let d = dayCache.get(day)
+    if (!d) {
+      d = new Date(day * 86400000).toISOString().slice(0, 10)
+      dayCache.set(day, d)
+    }
+    return d
+  }
 
   // 明细 → 汇总（超过窗口的折叠进 summary）
   function rollup(rows, summary, cutoff) {
-    const sumMap = new Map(summary.map((s) => [s.key, s]))
+    const sumMap = new Map()
+    for (const s of summary) sumMap.set(s.key, s)
     const detail = []
     for (const r of rows) {
       if (r.timeCreated && r.timeCreated < cutoff) {
-        const k = summaryKey(r)
+        const d = dateKey(r)
+        const k = `${d}|${r.model || ""}|${r.plan || ""}|${r.keyID || ""}`
         let a = sumMap.get(k)
         if (!a) {
-          a = { key: k, date: dateKey(r), model: r.model, plan: r.plan || "", keyID: r.keyID || "", requests: 0, inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0, reasoningTokens: 0, costUSD: 0 }
+          a = { key: k, date: d, model: r.model, plan: r.plan || "", keyID: r.keyID || "", requests: 0, inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0, reasoningTokens: 0, costUSD: 0 }
           sumMap.set(k, a)
         }
         a.requests++
@@ -1145,68 +1169,108 @@
     const map = new Map()
     for (const r of rows) {
       const k = keyOf2(r) || "(unknown)"
-      if (!map.has(k)) {
-        const o = { key: k }
-        for (const f of AGG_FIELDS) o[f] = 0
-        map.set(k, o)
+      let a = map.get(k)
+      if (!a) {
+        a = { key: k, requests: 0, inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0, reasoningTokens: 0, costUSD: 0, _t: 0 }
+        map.set(k, a)
       }
-      const a = map.get(k)
+      const it = r.inputTokens ?? 0
+      const cr = r.cacheReadTokens ?? 0
+      const cw = r.cacheWriteTokens ?? 0
+      const ot = r.outputTokens ?? 0
       a.requests++
-      for (const f of AGG_FIELDS.slice(1)) a[f] += r[f] ?? 0
+      a.inputTokens += it
+      a.cacheReadTokens += cr
+      a.cacheWriteTokens += cw
+      a.outputTokens += ot
+      a.reasoningTokens += r.reasoningTokens ?? 0
+      a.costUSD += r.costUSD ?? 0
+      a._t += it + cr + ot
     }
-    return [...map.values()].sort((a, b) => b.inputTokens + b.cacheReadTokens + b.outputTokens - (a.inputTokens + a.cacheReadTokens + a.outputTokens))
+    const arr = [...map.values()]
+    arr.sort((a, b) => b._t - a._t)
+    for (const o of arr) delete o._t
+    return arr
   }
   // 汇总条目直接累加（已带 requests 计数）
   function sumAggregate(summary, keyOf2) {
     const map = new Map()
     for (const s of summary) {
       const k = keyOf2(s) || "(unknown)"
-      if (!map.has(k)) {
-        const o = { key: k }
-        for (const f of AGG_FIELDS) o[f] = 0
-        map.set(k, o)
+      let a = map.get(k)
+      if (!a) {
+        a = { key: k, requests: 0, inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0, reasoningTokens: 0, costUSD: 0, _t: 0 }
+        map.set(k, a)
       }
-      const a = map.get(k)
-      for (const f of AGG_FIELDS) a[f] += s[f] ?? 0
+      const it = s.inputTokens ?? 0
+      const cr = s.cacheReadTokens ?? 0
+      const ot = s.outputTokens ?? 0
+      a.requests += s.requests ?? 0
+      a.inputTokens += it
+      a.cacheReadTokens += cr
+      a.cacheWriteTokens += s.cacheWriteTokens ?? 0
+      a.outputTokens += ot
+      a.reasoningTokens += s.reasoningTokens ?? 0
+      a.costUSD += s.costUSD ?? 0
+      a._t += it + cr + ot
     }
-    return [...map.values()].sort((a, b) => b.inputTokens + b.cacheReadTokens + b.outputTokens - (a.inputTokens + a.cacheReadTokens + a.outputTokens))
+    const arr = [...map.values()]
+    arr.sort((a, b) => b._t - a._t)
+    for (const o of arr) delete o._t
+    return arr
   }
   function mergeAgg(a, b) {
-    const m = new Map(a.map((x) => [x.key, x]))
+    const m = new Map()
+    const totals = new Map()
+    for (const x of a) {
+      m.set(x.key, x)
+      totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.outputTokens)
+    }
     for (const x of b) {
       const cur = m.get(x.key)
-      if (cur) for (const f of AGG_FIELDS) cur[f] += x[f] ?? 0
-      else m.set(x.key, { ...x })
+      if (cur) {
+        for (const f of AGG_FIELDS) cur[f] += x[f] ?? 0
+        totals.set(x.key, totals.get(x.key) + x.inputTokens + x.cacheReadTokens + x.outputTokens)
+      } else {
+        m.set(x.key, { ...x })
+        totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.outputTokens)
+      }
     }
-    return [...m.values()].sort((p, q) => q.inputTokens + q.cacheReadTokens + q.outputTokens - (p.inputTokens + p.cacheReadTokens + p.outputTokens))
+    const arr = [...m.values()]
+    arr.sort((p, q) => totals.get(q.key) - totals.get(p.key))
+    return arr
   }
 
   function rawRows(rows, keyNames = {}) {
-    const fmt = (t) => (t ? new Date(t).toISOString() : "")
     return rows
-      .map((r) => ({
-        timeUTC: fmt(r.timeCreated),
-        date: r.timeCreated ? fmt(r.timeCreated).slice(0, 10) : "",
-        sessionID: r.sessionID,
-        model: r.model,
-        inputTokens: r.inputTokens,
-        cacheReadTokens: r.cacheReadTokens,
-        cacheWriteTokens: r.cacheWriteTokens,
-        outputTokens: r.outputTokens,
-        reasoningTokens: r.reasoningTokens,
-        costUSD: r.costUSD?.toFixed(6) ?? "",
-        plan: r.plan ?? "",
-        keyID: r.keyID ?? "",
-        keyName: keyDisplayName(r.keyID, keyNames),
-        source: r.source,
-      }))
+      .map((r) => {
+        const iso = r.timeCreated ? new Date(r.timeCreated).toISOString() : ""
+        return {
+          timeUTC: iso,
+          date: iso ? iso.slice(0, 10) : "",
+          sessionID: r.sessionID,
+          model: r.model,
+          inputTokens: r.inputTokens,
+          cacheReadTokens: r.cacheReadTokens,
+          cacheWriteTokens: r.cacheWriteTokens,
+          outputTokens: r.outputTokens,
+          reasoningTokens: r.reasoningTokens,
+          costUSD: r.costUSD?.toFixed(6) ?? "",
+          plan: r.plan ?? "",
+          keyID: r.keyID ?? "",
+          keyName: keyDisplayName(r.keyID, keyNames),
+          source: r.source,
+        }
+      })
       .sort((a, b) => (a.timeUTC < b.timeUTC ? 1 : -1))
   }
 
   function toCSV(rows, cols) {
     if (!rows.length) return ""
     const esc = (v) => {
-      v = String(v ?? "")
+      if (v == null) return ""
+      if (typeof v === "number") return String(v)
+      v = String(v)
       return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
     }
     return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n")
@@ -1253,6 +1317,7 @@
     return d.getTime()
   }
 
+  const parseDateCache = new Map()
   function filterByRange(detail, summary, fromMs, toMs) {
     const fd = detail.filter((r) => {
       if (!r.timeCreated) return !fromMs && !toMs
@@ -1261,7 +1326,8 @@
       return true
     })
     const fs = summary.filter((s) => {
-      const t = Date.parse(s.date)
+      if (!parseDateCache.has(s.date)) parseDateCache.set(s.date, Date.parse(s.date))
+      const t = parseDateCache.get(s.date)
       if (Number.isNaN(t)) return !fromMs && !toMs
       if (fromMs && t < fromMs) return false
       if (toMs && t > toMs) return false
@@ -1324,6 +1390,80 @@
     $qa(".oc-export-presets button").forEach((b) => b.classList.toggle("oc-active", b.dataset.range === String(days)))
   }
   const mergedAggs = (detail, summary, sumKey, detKey) => mergeAgg(sumAggregate(summary, sumKey), aggregate(detail, detKey))
+
+  // 面板统计的纯数值计算（renderPanel 消费）：单遍成本窗口、循环极值，避免多趟 filter/spread
+  function computePanelStats(detail, summary, keyNames, settings, now) {
+    const sumF = (list, f) => list.reduce((a, r) => a + (r[f] ?? 0), 0)
+    const sumCost = (list) => list.reduce((a, r) => a + (r.costUSD ?? 0), 0)
+
+    // GO 限额始终用完整 detail 滚动窗口（单遍同时算 5h / 7d / 30d）
+    let cost5h = 0
+    let cost7d = 0
+    let cost30dQuota = 0
+    const c5 = now - 5 * 3600e3
+    const c7 = now - 7 * 24 * 3600e3
+    for (const r of detail) {
+      const c = r.costUSD ?? 0
+      cost30dQuota += c
+      if (r.timeCreated) {
+        if (r.timeCreated > c5) cost5h += c
+        if (r.timeCreated > c7) cost7d += c
+      }
+    }
+
+    // 概览统计区间（与限额独立）
+    let preset = settings.statPresetDays
+    if (preset !== 7 && preset !== 30 && preset !== "all") preset = 30
+    let viewDetail = detail
+    let viewSummary = []
+    let winStart = now - WINDOW_MS
+    let winLabel = t("statWindow30d")
+    if (preset === 7) {
+      const cut = now - 7 * 24 * 3600e3
+      viewDetail = detail.filter((r) => r.timeCreated && r.timeCreated >= cut)
+      viewSummary = []
+      winStart = cut
+      winLabel = t("statWindow7d")
+    } else if (preset === 30) {
+      viewDetail = detail
+      viewSummary = []
+      winStart = now - WINDOW_MS
+      winLabel = t("statWindow30d")
+    } else {
+      viewDetail = detail
+      viewSummary = summary
+      winStart = null
+      winLabel = t("statWindowAll")
+    }
+
+    const viewCost = sumCost(viewDetail) + sumF(viewSummary, "costUSD")
+    const total = {
+      requests: viewDetail.length + sumF(viewSummary, "requests"),
+      inputTokens: sumF(viewDetail, "inputTokens") + sumF(viewSummary, "inputTokens"),
+      cacheReadTokens: sumF(viewDetail, "cacheReadTokens") + sumF(viewSummary, "cacheReadTokens"),
+      outputTokens: sumF(viewDetail, "outputTokens") + sumF(viewSummary, "outputTokens"),
+    }
+    const topByCost = (arr, n) => [...arr].sort((a, b) => b.costUSD - a.costUSD).slice(0, n)
+    const byModel = topByCost(mergedAggs(viewDetail, viewSummary, (s) => s.model, (r) => r.model), settings.topModelCount)
+    const byKey = topByCost(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
+    const byPlan = mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
+
+    // 极值：与 Math.min(...map) 一致（null 时间戳按 0 参与比较），但单遍无 spread
+    let minTC = null
+    let maxTC = null
+    let anyTC = false
+    for (const r of viewDetail) {
+      const t = r.timeCreated == null ? 0 : r.timeCreated
+      if (r.timeCreated) anyTC = true
+      if (minTC === null || t < minTC) minTC = t
+      if (maxTC === null || t > maxTC) maxTC = t
+    }
+    if (!anyTC) {
+      minTC = null
+      maxTC = null
+    }
+    return { cost5h, cost7d, cost30dQuota, viewCost, total, byModel, byKey, byPlan, minTC, maxTC, viewDetail, viewSummary, preset, winStart, winLabel }
+  }
 
   // ---------- 主流程 ----------
   async function run(mode, btn, opts = {}) {
@@ -1392,50 +1532,8 @@
     const scrollTop = body?.scrollTop ?? 0
 
     const now = Date.now()
-    const sumF = (list, f) => list.reduce((a, r) => a + (r[f] ?? 0), 0)
-    const sumCost = (list) => list.reduce((a, r) => a + (r.costUSD ?? 0), 0)
-
-    // GO 限额始终用完整 detail 滚动窗口
-    const cost5h = sumCost(detail.filter((r) => r.timeCreated && now - r.timeCreated < 5 * 3600e3))
-    const cost7d = sumCost(detail.filter((r) => r.timeCreated && now - r.timeCreated < 7 * 24 * 3600e3))
-    const cost30dQuota = sumCost(detail)
-
-    // 概览统计区间（与限额独立）
-    let preset = settings.statPresetDays
-    if (preset !== 7 && preset !== 30 && preset !== "all") preset = 30
-    let viewDetail = detail
-    let viewSummary = []
-    let winStart = now - WINDOW_MS
-    let winLabel = t("statWindow30d")
-    if (preset === 7) {
-      const cut = now - 7 * 24 * 3600e3
-      viewDetail = detail.filter((r) => r.timeCreated && r.timeCreated >= cut)
-      viewSummary = []
-      winStart = cut
-      winLabel = t("statWindow7d")
-    } else if (preset === 30) {
-      viewDetail = detail
-      viewSummary = []
-      winStart = now - WINDOW_MS
-      winLabel = t("statWindow30d")
-    } else {
-      viewDetail = detail
-      viewSummary = summary
-      winStart = null
-      winLabel = t("statWindowAll")
-    }
-
-    const viewCost = sumCost(viewDetail) + sumF(viewSummary, "costUSD")
-    const total = {
-      requests: viewDetail.length + sumF(viewSummary, "requests"),
-      inputTokens: sumF(viewDetail, "inputTokens") + sumF(viewSummary, "inputTokens"),
-      cacheReadTokens: sumF(viewDetail, "cacheReadTokens") + sumF(viewSummary, "cacheReadTokens"),
-      outputTokens: sumF(viewDetail, "outputTokens") + sumF(viewSummary, "outputTokens"),
-    }
-    const topByCost = (arr, n) => [...arr].sort((a, b) => b.costUSD - a.costUSD).slice(0, n)
-    const byModel = topByCost(mergedAggs(viewDetail, viewSummary, (s) => s.model, (r) => r.model), settings.topModelCount)
-    const byKey = topByCost(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
-    const byPlan = mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
+    const stats = computePanelStats(detail, summary, keyNames, settings, now)
+    const { cost5h, cost7d, cost30dQuota, viewCost, total, byModel, byKey, byPlan, minTC, maxTC, viewDetail, viewSummary, preset, winStart, winLabel } = stats
 
     const fmtT = (n) => {
       if (n == null) return "-"
@@ -1444,8 +1542,6 @@
       return String(n)
     }
     const fmtD = (t) => (t ? new Date(t).toLocaleDateString() : "-")
-    const minTC = viewDetail.some((r) => r.timeCreated) ? Math.min(...viewDetail.map((r) => r.timeCreated)) : null
-    const maxTC = viewDetail.some((r) => r.timeCreated) ? Math.max(...viewDetail.map((r) => r.timeCreated)) : null
     const windowText = winStart != null ? `${fmtD(winStart)} ~ ${fmtD(now)}（${winLabel}）` : winLabel
 
     // bar 统一以费用为主指标排序和宽度，secondary 为右侧标注文字
