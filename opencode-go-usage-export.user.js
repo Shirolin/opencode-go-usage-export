@@ -1448,19 +1448,13 @@
     const byKey = topByCost(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
     const byPlan = mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
 
-    // 极值：与 Math.min(...map) 一致（null 时间戳按 0 参与比较），但单遍无 spread
+    // 极值：仅统计带真实时间戳的行（跳过 null，避免 0 时间戳污染为 1970-01-01）
     let minTC = null
     let maxTC = null
-    let anyTC = false
     for (const r of viewDetail) {
-      const t = r.timeCreated == null ? 0 : r.timeCreated
-      if (r.timeCreated) anyTC = true
-      if (minTC === null || t < minTC) minTC = t
-      if (maxTC === null || t > maxTC) maxTC = t
-    }
-    if (!anyTC) {
-      minTC = null
-      maxTC = null
+      if (!r.timeCreated) continue
+      if (minTC === null || r.timeCreated < minTC) minTC = r.timeCreated
+      if (maxTC === null || r.timeCreated > maxTC) maxTC = r.timeCreated
     }
     return { cost5h, cost7d, cost30dQuota, viewCost, total, byModel, byKey, byPlan, minTC, maxTC, viewDetail, viewSummary, preset, winStart, winLabel }
   }

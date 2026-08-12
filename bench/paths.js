@@ -143,6 +143,8 @@ function makeSuite(api, data) {
 
   return {
     paths,
+    detail,
+    summary,
     meta: {
       storedDetail: detail.length,
       summary: summary.length,
