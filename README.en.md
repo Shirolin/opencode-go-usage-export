@@ -93,3 +93,10 @@ Stored in `localStorage` (`oc-go-export-settings-v1`):
 [GNU General Public License v3.0](LICENSE) — free software: you may redistribute and modify it, but modified versions must also be open-sourced under GPL-3.0. See [LICENSE](./LICENSE) for details.
 
 Copyright (C) 2026 Shirolin
+
+## Sponsorship & Support
+
+If this project improves your OpenCode usage tracking experience, consider supporting the developer's continued maintenance:
+
+- ❤️ **Afdian (爱发电)**: <https://ifdian.net/a/shirolin>
+- ☕ **Ko-fi**: <https://ko-fi.com/shirolin>

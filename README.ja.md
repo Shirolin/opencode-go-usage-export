@@ -93,3 +93,10 @@
 [GNU General Public License v3.0](LICENSE) — 自由ソフトウェアです。再頒布・改変は自由ですが、改変版も GPL-3.0 でオープンソース化する必要があります。詳細は [LICENSE](./LICENSE) を参照してください。
 
 Copyright (C) 2026 Shirolin
+
+## スポンサーシップと支援
+
+このプロジェクトが OpenCode の利用状況管理に役立っているなら、開発者の継続的なメンテナンスを支援していただけると嬉しいです：
+
+- ❤️ **Afdian（愛発電）**: <https://ifdian.net/a/shirolin>
+- ☕ **Ko-fi**: <https://ko-fi.com/shirolin>

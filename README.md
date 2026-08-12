@@ -93,3 +93,10 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 [GNU General Public License v3.0](LICENSE) — 自由软件：可自由分发与修改，但修改版必须同样以 GPL-3.0 开源。详见 [LICENSE](./LICENSE)。
 
 Copyright (C) 2026 Shirolin
+
+## 赞助与支持
+
+如果你觉得本项目提升了你的 OpenCode 用量统计体验，欢迎支持开发者的持续维护：
+
+- ❤️ **爱发电 (Afdian)**：[https://ifdian.net/a/shirolin](https://ifdian.net/a/shirolin)
+- ☕ **Ko-fi**：[https://ko-fi.com/shirolin](https://ko-fi.com/shirolin)
