@@ -13,6 +13,7 @@ A Tampermonkey userscript that exports Go subscription usage statistics from the
 - **Full / incremental sync**: incremental sync early-stops at the exact timestamp, fetching only new requests
 - **Resume from checkpoint**: every page is persisted as it is fetched; an interrupted sync can continue where it left off
 - **Sequential paging + retry**: default 350 ms gap, automatic retries, stall detection to avoid infinite loops
+- **Interruptible sync**: a "Stop" button / timeout aborts the running sync immediately and saves what was already fetched; full sync has a hard page cap (2000 pages) as a safety net
 - **Auto-sync**: automatically runs an incremental sync when the page is opened more than 6 h after the last sync (no file download); toggleable in settings
 - **In-page stats panel**: totals, last-30-day cost, Go quota comparison (5h/$12 · 7d/$30 · 30d/$60), bar charts by model / key / plan
 - **Wide-window mode**: centered dialog (720px), better for browsing statistics and breakdowns
@@ -47,6 +48,7 @@ This script directly accesses OpenCode backend APIs, including your signed-in se
 | Update key names | Pull key names from the API-key endpoint and cache them |
 | Export CSV / Excel | Manual export for the selected date range |
 | Clear data | Delete the current workspace cache |
+| Stop | Abort the running sync, keeping data fetched so far (resume from checkpoint) |
 | ⤢ Wide window | Toggle between compact drawer / centered dialog |
 | ⚙ Settings | Expand settings: display, sync, export, etc. |
 

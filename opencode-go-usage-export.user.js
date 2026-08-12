@@ -18,6 +18,7 @@
   const IDB_STORE = "workspaces"
   const PAGE_SIZE = 50
   const CONC = 1 // 顺序拉页，避免短时间大量 /_server 请求
+  const MAX_PAGES = 2000 // 全量抓取页数硬上限（2000×50≈10 万行），防失控长跑
   const AUTO_GAP_MS = 6 * 3600e3
   const STALE_MS = 30 * 24 * 3600e3
   const WINDOW_MS = 30 * 24 * 3600e3 // 明细保留窗口
@@ -143,6 +144,9 @@
       securityWarnOk: "我知道了，不再提示",
       securityWarnRepo: "查看官方仓库",
       securityNote: "安全：仅使用官方版本 github.com/Shirolin/opencode-go-usage-export；本脚本可访问后台数据，未知来源修改版有泄露 API Key 风险",
+      btnCancel: "停止",
+      msgCancelled: "已取消，已保存 {0} 条",
+      msgPageCap: " · 已达页数上限 {0} 页，可能未抓全，建议增量同步",
     },
     en: {
       panelTitle: "OpenCode Go Usage",
@@ -239,6 +243,9 @@
       securityWarnRepo: "Open official repo",
       securityNote:
         "Security: use only the official version github.com/Shirolin/opencode-go-usage-export; this script can access backend data — modified copies from unknown sources risk leaking your API keys",
+      btnCancel: "Stop",
+      msgCancelled: "Cancelled — {0} rows saved",
+      msgPageCap: " · reached page cap ({0}), data may be incomplete — try incremental sync",
     },
     ja: {
       panelTitle: "OpenCode Go 利用状況",
@@ -335,6 +342,9 @@
       securityWarnRepo: "公式リポジトリを開く",
       securityNote:
         "セキュリティ：公式バージョン github.com/Shirolin/opencode-go-usage-export のみを使用してください。本スクリプトはバックエンドデータにアクセスするため、出所不明の改変版は API キー漏洩のリスクがあります",
+      btnCancel: "停止",
+      msgCancelled: "キャンセルしました（{0} 件保存）",
+      msgPageCap: " · ページ上限 {0} に達しました（一部欠落の可能性）・差分取得を推奨",
     },
     "zh-tw": {
       panelTitle: "OpenCode Go 用量匯出",
@@ -431,6 +441,9 @@
       securityWarnRepo: "查看官方儲存庫",
       securityNote:
         "安全：僅使用官方版本 github.com/Shirolin/opencode-go-usage-export；本腳本可存取後端資料，未知來源修改版有洩漏 API Key 風險",
+      btnCancel: "停止",
+      msgCancelled: "已取消，已儲存 {0} 筆",
+      msgPageCap: " · 已達頁數上限 {0} 頁，可能未抓全，建議增量同步",
     },
   }
 
@@ -702,7 +715,7 @@
     }
   }
 
-  const origFetch = window.fetch.bind(window)
+  let origFetch = window.fetch.bind(window)
   window.fetch = async function (input, init) {
     const url = typeof input === "string" ? input : input?.url
     const method = (init?.method || input?.method || "GET").toUpperCase()
@@ -957,8 +970,9 @@
     return fetchGate
   }
 
-  async function fetchPage(page) {
+  async function fetchPage(page, signal) {
     await throttleFetch()
+    throwIfAborted(signal)
     if (!observed) throw new Error("未捕获到服务端请求")
     const headers = {}
     for (const [k, v] of Object.entries(observed.headers || {})) {
@@ -993,7 +1007,7 @@
       body = JSON.stringify({ args: [args[0], page] })
     }
 
-    const res = await origFetch(url, { method, headers, body: body ?? undefined })
+    const res = await origFetch(url, { method, headers, body: body ?? undefined, signal: signal ?? undefined })
     if (!res.ok) throw new Error("HTTP " + res.status)
     const json = parsePayload(await res.text())
     const rows = extractRows(json)
@@ -1026,11 +1040,12 @@
     await waitFor(() => observed, 3000)
     return !!observed
   }
-  async function fetchWithRetry(page, tries = 3) {
+  async function fetchWithRetry(page, tries = 3, signal) {
     for (let i = 0; i < tries; i++) {
       try {
-        return await fetchPage(page)
+        return await fetchPage(page, signal)
       } catch (e) {
+        if (isAbort(e) || signal?.aborted) throw e
         if (i === tries - 1) throw e
         await sleep(400 * (i + 1))
       }
@@ -1092,11 +1107,17 @@
     }
     return rows
   }
-  async function domScrapeAll(onProgress) {
+  async function domScrapeAll(onProgress, signal) {
     const all = []
     let pageNo = 0
     let staleRounds = 0
+    let capped = false
+    let aborted = false
     for (;;) {
+      if (signal?.aborted) {
+        aborted = true
+        break
+      }
       all.push(...(await domScrapePage()))
       onProgress?.(all.length)
       const btns = $qa('[data-slot="pagination"] button')
@@ -1110,25 +1131,67 @@
       if ($q('[data-slot="usage-table-element"] tbody tr')?.textContent === first) staleRounds++
       else staleRounds = 0
       pageNo++
-      if (pageNo > 10000 || staleRounds > 3) break
+      if (pageNo > 10000 || staleRounds > 3) {
+        capped = pageNo > 10000
+        break
+      }
     }
-    return all
+    return { rows: all, capped, aborted }
   }
 
   // ---------- 并发拉页 ----------
-  async function fetchPages(onProgress, minTime) {
+  // 运行级中止：新运行自动中止旧运行；取消按钮/超时/面板重建共用 abortActiveRun
+  let activeAbort = null
+  const abortActiveRun = () => activeAbort?.abort()
+  const isAbort = (e) => e && (e.name === "AbortError" || e.name === "CancelError")
+  const throwIfAborted = (signal) => {
+    if (signal?.aborted) {
+      const e = new Error("aborted")
+      e.name = "AbortError"
+      throw e
+    }
+  }
+  async function withRunAbort(fn) {
+    const ac = new AbortController()
+    if (activeAbort) activeAbort.abort()
+    activeAbort = ac
+    try {
+      return await fn(ac.signal)
+    } finally {
+      if (activeAbort === ac) activeAbort = null
+    }
+  }
+
+  async function fetchPages(onProgress, minTime, signal) {
     const concurrency = minTime > 0 ? 1 : CONC
     const results = []
     let next = 0
     let end = false
     let stalled = 0
+    let capped = false
+    let aborted = false
     async function worker() {
       while (!end) {
+        if (signal?.aborted) {
+          aborted = true
+          end = true
+          return
+        }
+        if (next >= MAX_PAGES) {
+          capped = true
+          end = true
+          return
+        }
         const p = next++
         let rows
         try {
-          rows = await fetchWithRetry(p)
-        } catch {
+          rows = await fetchWithRetry(p, 3, signal)
+        } catch (e) {
+          if (isAbort(e) || signal?.aborted) {
+            aborted = true
+            end = true
+            return
+          }
           rows = null
         }
         if (!rows || rows.length === 0) {
@@ -1151,7 +1214,7 @@
       }
     }
     await Promise.all(Array.from({ length: concurrency }, worker))
-    return results
+    return { rows: results, capped, aborted }
   }
 
   // ---------- 聚合 / 分层 ----------
@@ -1507,54 +1570,69 @@
   // ---------- 主流程 ----------
   async function run(mode, btn, opts = {}) {
     const { downloadFiles = false } = opts
-    const wsData = await getWorkspaceData()
-    const now = Date.now()
-    const cutoff = now - WINDOW_MS
-    const maxStored = maxTimeCreated(wsData.detail)
-    const mergedMap = new Map(wsData.detail.map((r) => [keyOf(r), r]))
+    return withRunAbort(async (signal) => {
+      const wsData = await getWorkspaceData()
+      const now = Date.now()
+      const cutoff = now - WINDOW_MS
+      const maxStored = maxTimeCreated(wsData.detail)
+      const mergedMap = new Map(wsData.detail.map((r) => [keyOf(r), r]))
 
-    let rows, source
-    let fetchAll = null
-    try {
-      if (await ensureObserved()) fetchAll = (onP) => fetchPages(onP, mode === "incremental" ? maxStored : 0)
-    } catch {}
+      let source = null
+      let capped = false
+      let aborted = false
+      let fetchAll = null
+      try {
+        if (await ensureObserved()) fetchAll = (onP) => fetchPages(onP, mode === "incremental" ? maxStored : 0, signal)
+      } catch {}
 
-    if (fetchAll) {
-      source = "network"
-      rows = await fetchAll((n) => setStatus(btn, t(mode === "incremental" ? "msgFetchProgressInc" : "msgFetchProgressFull", n)))
-    } else {
-      source = "dom"
-      setStatus(btn, t("msgDomFallback"))
-      rows = await domScrapeAll((n) => setStatus(btn, t("msgDomProgress", n)))
-    }
-    if (!Array.isArray(rows)) rows = []
-
-    let added = 0
-    for (const r of rows) {
-      const k = keyOf(r)
-      if (!mergedMap.has(k)) {
-        mergedMap.set(k, r)
-        added++
+      let rows = []
+      if (fetchAll) {
+        source = "network"
+        const res = await fetchAll((n) => setStatus(btn, t(mode === "incremental" ? "msgFetchProgressInc" : "msgFetchProgressFull", n)))
+        rows = res.rows
+        capped = res.capped
+        aborted = res.aborted
+      } else {
+        source = "dom"
+        setStatus(btn, t("msgDomFallback"))
+        const res = await domScrapeAll((n) => setStatus(btn, t("msgDomProgress", n)), signal)
+        rows = res.rows
+        capped = res.capped
+        aborted = res.aborted
       }
-    }
-    const merged = [...mergedMap.values()].sort((a, b) => (b.timeCreated || 0) - (a.timeCreated || 0))
-    const dupTotal = rows.length - added
+      if (!Array.isArray(rows)) rows = []
 
-    // 分层：窗口内保留明细，窗口外折叠进汇总
-    const { detail, summary } = rollup(merged, wsData.summary || [], cutoff)
-    await saveWorkspaceData({ ...wsData, id: WS_ID, detail, summary, lastSync: now, lastAccess: now })
-    renderPanel(detail, summary, wsData.keyNames || {})
+      let added = 0
+      for (const r of rows) {
+        const k = keyOf(r)
+        if (!mergedMap.has(k)) {
+          mergedMap.set(k, r)
+          added++
+        }
+      }
+      const merged = [...mergedMap.values()].sort((a, b) => (b.timeCreated || 0) - (a.timeCreated || 0))
+      const dupTotal = rows.length - added
 
-    if (downloadFiles) await doExport("csv")
+      // 分层：窗口内保留明细，窗口外折叠进汇总；取消/达上限也保存已抓部分（断点续传）
+      const { detail, summary } = rollup(merged, wsData.summary || [], cutoff)
+      // 取消时保留原 lastSync，避免抑制下次自动同步
+      await saveWorkspaceData({ ...wsData, id: WS_ID, detail, summary, lastSync: aborted ? wsData.lastSync : now, lastAccess: now })
+      renderPanel(detail, summary, wsData.keyNames || {})
 
-    const btns = $qa('[data-slot="pagination"] button')
-    if (btns.length >= 2 && !btns[0].disabled) btns[0].click()
+      if (downloadFiles) await doExport("csv")
 
-    setStatus(
-      btn,
-      t(mode === "incremental" ? "msgDoneInc" : "msgDoneFull", source, added, detail.length, summary.length) +
-        (dupTotal > 0 ? t("msgDedup", dupTotal) : ""),
-    )
+      const btns = $qa('[data-slot="pagination"] button')
+      if (btns.length >= 2 && !btns[0].disabled) btns[0].click()
+
+      if (aborted) setStatus(btn, t("msgCancelled", added))
+      else
+        setStatus(
+          btn,
+          t(mode === "incremental" ? "msgDoneInc" : "msgDoneFull", source, added, detail.length, summary.length) +
+            (dupTotal > 0 ? t("msgDedup", dupTotal) : "") +
+            (capped ? t("msgPageCap", MAX_PAGES) : ""),
+        )
+    })
   }
 
   // ---------- 面板 ----------
@@ -2034,7 +2112,10 @@
     const btnNames = mkBtn(t("btnNames"), false)
     const btnClear = mkBtn(t("btnClear"), false)
     btnClear.classList.add("oc-danger", "oc-span2")
-    actions.append(btnFull, btnInc, btnRefresh, btnNames, btnClear)
+    const btnCancel = mkBtn(t("btnCancel"), false)
+    btnCancel.disabled = true
+    btnCancel.addEventListener("click", abortActiveRun)
+    actions.append(btnFull, btnInc, btnRefresh, btnNames, btnCancel, btnClear)
 
     const info = document.createElement("div")
     info.id = "oc-go-export-info"
@@ -2130,6 +2211,7 @@
     document.addEventListener("keydown", onDocKeydown)
     // 语言切换重建时清理监听器，避免泄漏
     root.addEventListener("oc-destroy", () => {
+      abortActiveRun()
       document.removeEventListener("click", onDocClick)
       document.removeEventListener("keydown", onDocKeydown)
     })
@@ -2212,9 +2294,18 @@
     const guard = (fn) => () => {
       openDrawer()
       root.classList.add("oc-busy")
-      const buttons = [btnFull, btnInc, btnRefresh, btnNames, btnClear]
+      const buttons = [btnFull, btnInc, btnRefresh, btnNames, btnClear, btnCancel]
       buttons.forEach((b) => (b.disabled = true))
-      Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error(t("msgTimeout"))), 10 * 60 * 1000))])
+      btnCancel.disabled = false // 抓取期间仅「停止」可点
+      Promise.race([
+        fn(),
+        new Promise((_, rej) =>
+          setTimeout(() => {
+            abortActiveRun() // 超时 = 中止抓取，而不是让它后台继续
+            rej(new Error(t("msgTimeout")))
+          }, 10 * 60 * 1000),
+        ),
+      ])
         .catch((e) => {
           setStatus(null, t("msgError", e.message))
           console.error(e)

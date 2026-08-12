@@ -57,6 +57,9 @@ function makeSandbox() {
     setStatus: () => {},
   }
   sandbox.globalThis = sandbox
+  // 设置层存根：throttleFetch 依赖区域外的 sleep/getPageGapMs，用沙箱全局解析（页间隔可测）
+  sandbox.sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  sandbox.getPageGapMs = () => sandbox.__pageGapMs || 250
   vm.createContext(sandbox)
   return sandbox
 }
@@ -71,12 +74,25 @@ function loadApi() {
   if (!aggConsts) throw new Error("AGG_FIELDS 常量未找到")
   const windowMs = (src.match(/const WINDOW_MS = [^\n]+/) || [""])[0]
   if (!windowMs) throw new Error("WINDOW_MS 常量未找到")
-  regionB = aggConsts + "\n" + windowMs + "\n" + regionB
+  const fetchConsts = (["PAGE_SIZE", "CONC", "MAX_PAGES"].map((n) => (src.match(new RegExp("const " + n + " = [^\\n]+")) || [""])[0])).join("\n")
+  if (!fetchConsts.trim()) throw new Error("分页常量未找到")
+  regionB = aggConsts + "\n" + windowMs + "\n" + fetchConsts + "\n" + regionB
   regionA += "\n;globalThis.__apiA = { norm, keyDisplayName, keyLabel, collectKnownKeyIDs, extractApiKeyNames };"
-  regionB += "\n;globalThis.__apiB = { keyOf, dateKey, rollup, aggregate, sumAggregate, mergeAgg, mergedAggs, maxTimeCreated, escHtml, rawRows, toCSV, filterByRange, parseDateInput, AGG_FIELDS, AGG_COLS, ...(typeof computePanelStats !== 'undefined' ? { computePanelStats } : {}) };"
+  regionB += "\n;globalThis.__apiB = { keyOf, dateKey, rollup, aggregate, sumAggregate, mergeAgg, mergedAggs, maxTimeCreated, escHtml, rawRows, toCSV, filterByRange, parseDateInput, fetchPages, AGG_FIELDS, AGG_COLS, ...(typeof computePanelStats !== 'undefined' ? { computePanelStats } : {}) };"
   vm.runInContext(regionA, sb, { filename: "user.js#network" })
   vm.runInContext(regionB, sb, { filename: "user.js#dom-agg" })
-  return { ...sb.__apiA, ...sb.__apiB }
+  const api = { ...sb.__apiA, ...sb.__apiB }
+  api.sandbox = sb
+  // 测试钩子：注入模拟请求（observed）与可控 fetch（origFetch 已改为 let）
+  api.setObserved = (val) => {
+    sb.__hook = val
+    vm.runInContext("observed = __hook", sb)
+  }
+  api.setOrigFetch = (fn) => {
+    sb.__hook = fn
+    vm.runInContext("origFetch = __hook", sb)
+  }
+  return api
 }
 
 module.exports = { loadApi, SRC }
