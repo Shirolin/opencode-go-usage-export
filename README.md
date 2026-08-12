@@ -1,5 +1,9 @@
 # OpenCode Go 用量导出
 
+[简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
+
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+
 Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usage 页的 Go 订阅用量统计，含 token 细分（cache read / reasoning）、按模型 / API key / plan / 日期聚合，支持 CSV + Excel 导出。
 
 ## 功能
@@ -83,3 +87,9 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 - **v3**：网络层拦截原始 JSON、增量时间戳早停、断点续传、IndexedDB 存储
 - **v2**：增量抓取、localStorage 缓存去重
 - **v1**：DOM 抓取导出 CSV
+
+## 许可证
+
+[GNU General Public License v3.0](LICENSE) — 自由软件：可自由分发与修改，但修改版必须同样以 GPL-3.0 开源。详见 [LICENSE](./LICENSE)。
+
+Copyright (C) 2026 Shirolin

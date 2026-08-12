@@ -7,6 +7,7 @@
 // @match        https://opencode.ai/workspace/*/usage
 // @match        https://opencode.ai/*/workspace/*/usage
 // @require      https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
+// @license      GPL-3.0-or-later
 // @grant        none
 // ==/UserScript==
 
