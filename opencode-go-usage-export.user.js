@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go Usage Export
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.3
+// @version      1.0.4
 // @author       Shirolin
 // @run-at       document-start
 // @description  OpenCode Go usage dashboard & export — in-page stats panel (totals, cost, Go quota 5h/7d/30d, breakdowns by model / API key / plan), network-layer capture, 30-day detail + permanent aggregates in IndexedDB, incremental sync, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
@@ -44,6 +44,7 @@
     pageGapMs: 350,
     topKeyCount: 5,
     topModelCount: 6,
+    dateFormat: "auto",
     lang: "",
   }
 
@@ -86,6 +87,8 @@
       settingTopKey: "Key 排行数",
       settingLang: "语言",
       settingLangAuto: "自动",
+      settingDateFormat: "日期格式",
+      settingDateFormatAuto: "自动（跟随浏览器语言）",
       // export block
       exportTitle: "导出数据",
       exportPreset7: "近7天",
@@ -188,6 +191,8 @@
       settingTopKey: "Keys to show",
       settingLang: "Language",
       settingLangAuto: "Auto",
+      settingDateFormat: "Date format",
+      settingDateFormatAuto: "Auto (browser language)",
       exportTitle: "Export",
       exportPreset7: "Last 7 days",
       exportPreset30: "Last 30 days",
@@ -287,6 +292,8 @@
       settingTopKey: "表示Key数",
       settingLang: "言語",
       settingLangAuto: "自動",
+      settingDateFormat: "日付形式",
+      settingDateFormatAuto: "自動（ブラウザ言語に従う）",
       exportTitle: "エクスポート",
       exportPreset7: "直近7日",
       exportPreset30: "直近30日",
@@ -386,6 +393,8 @@
       settingTopKey: "顯示 Key 數",
       settingLang: "語言",
       settingLangAuto: "自動",
+      settingDateFormat: "日期格式",
+      settingDateFormatAuto: "自動（跟隨瀏覽器語言）",
       exportTitle: "匯出",
       exportPreset7: "近 7 天",
       exportPreset30: "近 30 天",
@@ -513,6 +522,25 @@
     return ms === 250 || ms === 350 || ms === 500 ? ms : DEFAULT_SETTINGS.pageGapMs
   }
 
+  // 日期显示格式（可自定义）：auto 跟随浏览器语言，其余为国际通用格式
+  function fmtDate(ms) {
+    if (!ms) return "-"
+    const f = loadSettings().dateFormat
+    if (!f || f === "auto") return new Date(ms).toLocaleDateString()
+    const d = new Date(ms)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    if (f === "iso") return `${y}-${m}-${day}`
+    if (f === "ymd") return `${y}/${m}/${day}`
+    if (f === "dmy") return `${day}/${m}/${y}`
+    if (f === "mdy") return `${m}/${day}/${y}`
+    return new Date(ms).toLocaleDateString()
+  }
+  function fmtDateTime(ms) {
+    return ms ? `${fmtDate(ms)} ${new Date(ms).toLocaleTimeString()}` : t("msgNone")
+  }
+
   const autoEnabled = () => loadSettings().autoSync
   const setAuto = (v) => saveSettings({ autoSync: v })
   const panelOpen = () => localStorage.getItem(PANEL_OPEN_KEY) === "1"
@@ -557,11 +585,12 @@
     setVal("#oc-set-page-gap", s.pageGapMs)
     setVal("#oc-set-top-model", s.topModelCount)
     setVal("#oc-set-top-key", s.topKeyCount)
+    setVal("#oc-set-date-format", s.dateFormat)
     const meta = $q("#oc-set-meta")
     if (meta) {
       getWorkspaceData()
         .then((ws) => {
-          const last = ws.lastSync ? new Date(ws.lastSync).toLocaleString() : t("msgNone")
+          const last = ws.lastSync ? fmtDateTime(ws.lastSync) : t("msgNone")
           meta.textContent = `Workspace: ${WS_ID} · ${t("msgLastSync", last)}`
         })
         .catch(() => {
@@ -1663,7 +1692,7 @@
       if (n >= 1e3) return (n / 1e3).toFixed(1) + "k"
       return String(n)
     }
-    const fmtD = (t) => (t ? new Date(t).toLocaleDateString() : "-")
+    const fmtD = fmtDate
     const windowText = winStart != null ? `${fmtD(winStart)} ~ ${fmtD(now)}（${winLabel}）` : winLabel
 
     // bar 统一以费用为主指标排序和宽度，secondary 为右侧标注文字
@@ -1963,7 +1992,7 @@
     if (info && !isProgress) {
       const wsData = await getWorkspaceData().catch(() => emptyRec())
       if (!text || text === t("msgReady") || text === t("msgRefreshed")) {
-        const last = wsData.lastSync ? new Date(wsData.lastSync).toLocaleString() : t("msgNone")
+        const last = wsData.lastSync ? fmtDateTime(wsData.lastSync) : t("msgNone")
         info.textContent = t("msgInfoBar", wsData.detail.length.toLocaleString(), wsData.summary.length.toLocaleString(), last)
       }
       renderPanel(wsData.detail, wsData.summary, wsData.keyNames || {})
@@ -2080,6 +2109,16 @@
           <div class="oc-settings-row">
             <span>${t("settingDimensionsOpen")}</span>
             <label class="oc-toggle"><input type="checkbox" id="oc-set-dimensions-open" /><span class="oc-toggle-track"></span></label>
+          </div>
+          <div class="oc-settings-row">
+            <span>${t("settingDateFormat")}</span>
+            <select id="oc-set-date-format">
+              <option value="auto">${t("settingDateFormatAuto")}</option>
+              <option value="iso">2026-08-12</option>
+              <option value="ymd">2026/08/12</option>
+              <option value="dmy">12/08/2026</option>
+              <option value="mdy">08/12/2026</option>
+            </select>
           </div>
         </div>
         <details class="oc-settings-advanced">
@@ -2244,7 +2283,7 @@
         if (key === "displayMode") applyDisplayMode(val)
         if (key === "exportPresetDays") setExportRange(val)
         if (key === "exportSectionOpen") exportBlock.open = val
-        if (key === "overviewOpen" || key === "dimensionsOpen" || key === "topModelCount" || key === "topKeyCount") {
+        if (key === "overviewOpen" || key === "dimensionsOpen" || key === "topModelCount" || key === "topKeyCount" || key === "dateFormat") {
           getWorkspaceData().then((ws) => renderPanel(ws.detail, ws.summary, ws.keyNames || {})).catch(() => {})
         }
       }
@@ -2288,6 +2327,7 @@
     bindSetting("#oc-set-export-open", "exportSectionOpen")
     bindSetting("#oc-set-overview-open", "overviewOpen")
     bindSetting("#oc-set-dimensions-open", "dimensionsOpen")
+    bindSetting("#oc-set-date-format", "dateFormat")
     bindSetting("#oc-set-page-gap", "pageGapMs", (v) => parseInt(v, 10))
     bindSetting("#oc-set-top-model", "topModelCount")
     bindSetting("#oc-set-top-key", "topKeyCount")
