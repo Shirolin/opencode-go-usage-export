@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         OpenCode Go Usage Export
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.2
+// @version      1.0.3
 // @author       Shirolin
 // @run-at       document-start
-// @description  Export OpenCode Go usage from the OpenCode console — token breakdown (cache read / reasoning), aggregated by model / API key / plan / date, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
+// @description  OpenCode Go usage dashboard & export — in-page stats panel (totals, cost, Go quota 5h/7d/30d, breakdowns by model / API key / plan), network-layer capture, 30-day detail + permanent aggregates in IndexedDB, incremental sync, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
 // @match        https://opencode.ai/workspace/*/usage
 // @match        https://opencode.ai/*/workspace/*/usage
 // @require      https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
