@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usage 页的 Go 订阅用量统计，含 token 细分（cache read / reasoning）、按模型 / API key / plan / 日期聚合，支持 CSV + Excel 导出。
 
@@ -82,6 +82,11 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 - 需要精确审计请定期手动「全量抓取」并保留下载的 CSV
 
 ## 版本历史
+
+- **v1.0.4**：面板日期显示格式支持自定义（auto / ISO / YMD / DMY / MDY），可在设置面板切换。
+- **v1.0.3**：`@description` 突出统计面板（dashboard & export），改为英文优先表述。
+- **v1.0.2**：`@description` 精简为英文单行，中文内容移交 Greasy Fork 本地化块。
+- **v1.0.1**：脚本名改为英文 "OpenCode Go Usage Export"，`@description` 英文优先。
 
 - **v1.0.0**：首个公开发布版。功能：网络层抓取原始 JSON、分层存储（30 天明细 + 永久聚合）、全量/增量同步、断点续传、可中断抓取（停止按钮/超时/页数上限兜底）、自动同步、统计面板、CSV/Excel 导出；安全提示（仅官方来源）、UTC 日界统一、去重/XSS/CSV 健壮性修复。（开发期 v5.x 历史压缩）
 

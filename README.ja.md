@@ -2,7 +2,7 @@
 
 # OpenCode Go 利用状況エクスポート
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 [OpenCode コンソール](https://opencode.ai) の Usage ページから Go サブスクリプションの利用統計をエクスポートする Tampermonkey ユーザースクリプトです。token の内訳（cache read / reasoning）や、モデル / API キー / プラン / 日付ごとの集計に対応し、CSV + Excel エクスポートが可能です。
 
@@ -82,6 +82,11 @@
 - 正確な監査が必要な場合は、定期的に手動「全件取得」を行い、ダウンロードした CSV を保存してください
 
 ## 変更履歴
+
+- **v1.0.4**：パネルの日付表示形式をカスタマイズ可能に（auto / ISO / YMD / DMY / MDY、設定パネルで切替）。
+- **v1.0.3**：`@description` で統計パネル（dashboard & export）を強調、英語優先の表記に。
+- **v1.0.2**：`@description` を簡潔な英語1行に、中文は Greasy Fork ローカライズブロックへ移動。
+- **v1.0.1**：スクリプト名を英語 "OpenCode Go Usage Export" に、`@description` 英語優先に。
 
 - **v1.0.0**: 最初の公開リリース。ネットワーク層での生 JSON 取得、階層ストレージ（30 日明細 + 恒久集計）、全件/差分同期、途中再開、中断可能な同期（停止ボタン / タイムアウト / ページ上限の安全弁）、自動同期、統計パネル、CSV/Excel エクスポート。セキュリティ注意（公式ソースのみ）、UTC 日付境界の統一、重複排除/XSS/CSV の堅牢性修正。（開発期 v5.x の履歴は圧縮）
 

@@ -2,7 +2,7 @@
 
 # OpenCode Go 用量匯出
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) Usage 頁的 Go 訂閱用量統計，含 token 細分（cache read / reasoning）、依模型 / API key / plan / 日期彙總，支援 CSV + Excel 匯出。
 
@@ -82,6 +82,11 @@ Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) 
 - 需要精確稽核請定期手動「全量同步」並保留下載的 CSV
 
 ## 版本歷史
+
+- **v1.0.4**：面板日期顯示格式支援自訂（auto / ISO / YMD / DMY / MDY），可在設定面板切換。
+- **v1.0.3**：`@description` 突出統計面板（dashboard & export），改為英文優先表述。
+- **v1.0.2**：`@description` 精簡為英文單行，中文內容移交 Greasy Fork 本地化塊。
+- **v1.0.1**：腳本名改為英文 "OpenCode Go Usage Export"，`@description` 英文優先。
 
 - **v1.0.0**：首個公開發布版。功能：網路層擷取原始 JSON、分層儲存（30 天明細 + 永久彙總）、全量/增量同步、斷點續傳、可中斷同步（停止按鈕/逾時/頁數上限兜底）、自動同步、統計面板、CSV/Excel 匯出；安全提示（僅官方來源）、UTC 日界統一、去重/XSS/CSV 健壯性修復。（開發期 v5.x 歷史壓縮）
 

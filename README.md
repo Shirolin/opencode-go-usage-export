@@ -2,7 +2,7 @@
 
 # OpenCode Go Usage Export
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-5.10.0-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 A Tampermonkey userscript that exports Go subscription usage statistics from the [OpenCode console](https://opencode.ai) Usage page — token breakdown (cache read / reasoning), aggregated by model / API key / plan / date, with CSV + Excel export.
 
@@ -82,6 +82,11 @@ Stored in `localStorage` (`oc-go-export-settings-v1`):
 - For accurate audits, run a manual "Full sync" regularly and keep the downloaded CSVs
 
 ## Changelog
+
+- **v1.0.4**: panel date display format is now configurable (auto / ISO / YMD / DMY / MDY) via the settings panel.
+- **v1.0.3**: `@description` now highlights the stats dashboard & export; English-first wording.
+- **v1.0.2**: `@description` trimmed to a concise English single line; Chinese text moved to the Greasy Fork localization block.
+- **v1.0.1**: script renamed to English "OpenCode Go Usage Export"; `@description` English-first.
 
 - **v1.0.0**: first public release. Network-layer raw JSON capture, tiered storage (30-day detail + permanent aggregates), full/incremental sync, resume from checkpoint, interruptible sync (Stop button / timeout / page-cap safety net), auto-sync, stats panel, CSV/Excel export; security notice (official-source-only), unified UTC day boundaries, dedupe/XSS/CSV robustness fixes. (Pre-release v5.x history condensed.)
 
