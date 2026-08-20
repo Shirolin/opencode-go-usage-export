@@ -117,6 +117,10 @@
       dimByModel: "按模型 · {0}",
       dimByKey: "按 API key · {0}",
       dimByPlan: "按 plan · {0}",
+      statCacheHitTitle: "缓存命中率（按模型）",
+      colModel: "模型",
+      colHitRate: "命中率",
+
       unitTok: " tok",
       unitReqs: " 次",
       unitReqsPlain: "次",
@@ -1422,7 +1426,8 @@
     }
     const raw = rawRows(detail, keyNames)
     add("raw", raw, Object.keys(raw[0] || {}))
-    add("by-model", mergedAggs(detail, summary, (s) => s.model, (r) => r.model), AGG_COLS)
+    const byModelX = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: cacheHitRate(r) }))
+    add("by-model", byModelX, [...AGG_COLS, "cacheHitRate"])
     add("by-date", mergedAggs(detail, summary, (s) => s.date, dateKey), AGG_COLS)
     add("by-key", mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), AGG_COLS)
     add("by-plan", mergedAggs(detail, summary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go"), AGG_COLS)
@@ -1496,7 +1501,8 @@
     } else {
       const raw = rawRows(detail, keyNames)
       download(`go-usage-raw${tag}-${ts}.csv`, toCSV(raw, Object.keys(raw[0] || {})))
-      download(`go-usage-by-model${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => s.model, (r) => r.model), AGG_COLS))
+      const byModelCsv = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: cacheHitRate(r) }))
+      download(`go-usage-by-model${tag}-${ts}.csv`, toCSV(byModelCsv, [...AGG_COLS, "cacheHitRate"]))
       download(`go-usage-by-date${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => s.date, dateKey), AGG_COLS))
       download(`go-usage-by-key${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), AGG_COLS))
       download(`go-usage-by-plan${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go"), AGG_COLS))
@@ -1531,6 +1537,16 @@
   }
 
   // HTML 转义：面板渲染服务端/用户数据时使用，防标签注入（XSS）
+  // 缓存命中率（业内共识口径 A）：cacheReadTokens / (cacheReadTokens + cacheWriteTokens + inputTokens)
+  // 分母为 0 / 全 0 时返回 0（而非 NaN），聚合对象（含单条明细）直接套用
+  function cacheHitRate(o) {
+    const it = o.inputTokens ?? 0
+    const cr = o.cacheReadTokens ?? 0
+    const cw = o.cacheWriteTokens ?? 0
+    const denom = it + cr + cw
+    return denom ? cr / denom : 0
+  }
+
   const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 
   // 面板统计的纯数值计算（renderPanel 消费）：单遍成本窗口、循环极值，避免多趟 filter/spread
@@ -1587,6 +1603,8 @@
     }
     const topByCost = (arr, n) => [...arr].sort((a, b) => b.costUSD - a.costUSD).slice(0, n)
     const byModel = topByCost(mergedAggs(viewDetail, viewSummary, (s) => s.model, (r) => r.model), settings.topModelCount)
+    for (const m of byModel) m.cacheHitRate = cacheHitRate(m)
+
     const byKey = topByCost(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
     const byPlan = mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
 
@@ -1724,7 +1742,7 @@
       const maxCost = byModel[0].costUSD
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByModel", byModel.length)}</summary>
-        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok"))).join("")}</div>
+        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + (m.cacheHitRate != null ? ` · ${(m.cacheHitRate * 100).toFixed(1)}%` : ""))).join("")}</div>
       </details>`)
     }
     if (byKey.length) {
@@ -1740,6 +1758,16 @@
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByPlan", planSorted.length)}</summary>
         <div class="oc-fold-body">${planSorted.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + " · " + m.requests.toLocaleString() + t("unitReqs"))).join("")}</div>
+      </details>`)
+    }
+
+    if (byModel.length) {
+      const hitRows = byModel
+        .map((m) => `<tr><td>${escHtml(m.key)}</td><td>${m.cacheHitRate != null ? (m.cacheHitRate * 100).toFixed(1) + "%" : "-"}</td></tr>`)
+        .join("")
+      dimFolds.push(`<details class="oc-fold"${dimOpen}>
+        <summary>${t("statCacheHitTitle", byModel.length)}</summary>
+        <div class="oc-fold-body"><table class="oc-cache-hit-table"><thead><tr><th>${t("colModel")}</th><th>${t("colHitRate")}</th></tr></thead><tbody>${hitRows}</tbody></table></div>
       </details>`)
     }
 

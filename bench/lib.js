@@ -78,7 +78,8 @@ function loadApi() {
   if (!fetchConsts.trim()) throw new Error("分页常量未找到")
   regionB = aggConsts + "\n" + windowMs + "\n" + fetchConsts + "\n" + regionB
   regionA += "\n;globalThis.__apiA = { norm, keyDisplayName, keyLabel, collectKnownKeyIDs, extractApiKeyNames };"
-  regionB += "\n;globalThis.__apiB = { keyOf, dateKey, rollup, aggregate, sumAggregate, mergeAgg, mergedAggs, maxTimeCreated, escHtml, rawRows, toCSV, filterByRange, parseDateInput, fetchPages, AGG_FIELDS, AGG_COLS, ...(typeof computePanelStats !== 'undefined' ? { computePanelStats } : {}) };"
+  regionB += "\n;globalThis.__apiB = { keyOf, dateKey, rollup, aggregate, sumAggregate, mergeAgg, mergedAggs, maxTimeCreated, escHtml, rawRows, toCSV, filterByRange, parseDateInput, fetchPages, cacheHitRate, AGG_FIELDS, AGG_COLS, ...(typeof computePanelStats !== 'undefined' ? { computePanelStats } : {}) };"
+
   vm.runInContext(regionA, sb, { filename: "user.js#network" })
   vm.runInContext(regionB, sb, { filename: "user.js#dom-agg" })
   const api = { ...sb.__apiA, ...sb.__apiB }
