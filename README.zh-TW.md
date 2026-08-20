@@ -2,7 +2,7 @@
 
 # OpenCode Go 用量匯出
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.5-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) Usage 頁的 Go 訂閱用量統計，含 token 細分（cache read / reasoning）、依模型 / API key / plan / 日期彙總，支援 CSV + Excel 匯出。
 
@@ -16,7 +16,6 @@ Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) 
 - **可中斷同步**：「停止」按鈕 / 逾時立即中止同步並儲存已抓資料；全量同步有頁數上限（2000 頁）兜底
 - **自動同步**：開啟頁面距上次同步超過 6 小時自動增量（不下載檔案），可在設定中開關
 - **頁面內統計面板**：總量、近 30 天成本、Go 配額比較（5h/$12 · 7d/$30 · 30d/$60）、依模型 / key / plan 長條圖
-- **依模型快取命中率**：依模型的快取讀取命中率（cacheRead / (cacheRead + cacheWrite + input)），在模型長條圖副標註命中率%，並單列快取命中率表格；依模型 CSV/Excel 匯出也包含該欄。
 - **大視窗模式**：置中彈窗（720px），更適合瀏覽統計與維度分析
 - **設定面板**：顯示模式、自動同步、匯出預設值、面板摺疊、拉頁間隔、排行數量等
 - **API key 名稱**：手動更新 key 名稱，面板與匯出中顯示友善標籤
@@ -86,7 +85,6 @@ Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) 
 
 ## 版本歷史
 
-- **v1.0.5**：統計面板新增「依模型快取命中率」（業內口徑 A：cacheRead / (cacheRead + cacheWrite + input)），模型長條圖副標註命中率% 並單列命中率表格，依模型 CSV/Excel 匯出同步包含該欄。
 - **v1.0.4**：面板日期顯示格式支援自訂（auto / ISO / YMD / DMY / MDY），可在設定面板切換。
 - **v1.0.3**：`@description` 突出統計面板（dashboard & export），改為英文優先表述。
 - **v1.0.2**：`@description` 精簡為英文單行，中文內容移交 Greasy Fork 本地化塊。

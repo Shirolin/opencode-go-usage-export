@@ -2,7 +2,7 @@
 
 # OpenCode Go Usage Export
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.5-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 A Tampermonkey userscript that exports Go subscription usage statistics from the [OpenCode console](https://opencode.ai) Usage page — token breakdown (cache read / reasoning), aggregated by model / API key / plan / date, with CSV + Excel export.
 
@@ -16,7 +16,6 @@ A Tampermonkey userscript that exports Go subscription usage statistics from the
 - **Interruptible sync**: a "Stop" button / timeout aborts the running sync immediately and saves what was already fetched; full sync has a hard page cap (2000 pages) as a safety net
 - **Auto-sync**: automatically runs an incremental sync when the page is opened more than 6 h after the last sync (no file download); toggleable in settings
 - **In-page stats panel**: totals, last-30-day cost, Go quota comparison (5h/$12 · 7d/$30 · 30d/$60), bar charts by model / key / plan
-- **Cache-hit rate by model**: per-model cache-read hit rate (cacheRead / (cacheRead + cacheWrite + input)) shown as a share on the model bar chart and in a dedicated table; also exported in the by-model CSV/Excel.
 - **Wide-window mode**: centered dialog (720px), better for browsing statistics and breakdowns
 - **Settings panel**: display mode, auto-sync, export defaults, panel folding, paging interval, top-N counts, etc.
 - **API key names**: manually refresh key names; friendly labels in the panel and in exports
@@ -86,7 +85,6 @@ Stored in `localStorage` (`oc-go-export-settings-v1`):
 
 ## Changelog
 
-- **v1.0.5**: added per-model cache-hit rate (industry-standard formula A) to the stats panel — shown as a share on the model bars and in a dedicated table, and included in the by-model CSV/Excel export.
 - **v1.0.4**: panel date display format is now configurable (auto / ISO / YMD / DMY / MDY) via the settings panel.
 - **v1.0.3**: `@description` now highlights the stats dashboard & export; English-first wording.
 - **v1.0.2**: `@description` trimmed to a concise English single line; Chinese text moved to the Greasy Fork localization block.

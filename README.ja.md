@@ -2,7 +2,7 @@
 
 # OpenCode Go 利用状況エクスポート
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.5-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 [OpenCode コンソール](https://opencode.ai) の Usage ページから Go サブスクリプションの利用統計をエクスポートする Tampermonkey ユーザースクリプトです。token の内訳（cache read / reasoning）や、モデル / API キー / プラン / 日付ごとの集計に対応し、CSV + Excel エクスポートが可能です。
 
@@ -16,7 +16,6 @@
 - **中断可能な同期**: 「停止」ボタン / タイムアウトで即時中断し、取得済みデータを保存。全件取得にはページ上限（2000 ページ）の安全弁
 - **自動同期**: 最終同期から 6 時間以上経過してページを開くと自動で差分取得（ファイルはダウンロードしない）。設定でオン/オフ可能
 - **ページ内統計パネル**: 合計、直近 30 日コスト、Go 利用上限の比較（5h/$12 · 7d/$30 · 30d/$60）、モデル / key / プラン別のバーチャート
-- **モデル別キャッシュヒット率**: モデルごとのキャッシュ読み込みヒット率（cacheRead / (cacheRead + cacheWrite + input)）を、モデル棒グラフの副注釈と専用テーブルで表示。by-model CSV/Excel エクスポートにも含まれます。
 - **大画面モード**: 中央のダイアログ（720px）で統計や内訳を見やすく
 - **設定パネル**: 表示モード、自動同期、エクスポート既定値、パネル折りたたみ、取得間隔、ランキング件数など
 - **API キー名**: キー名を手動更新し、パネルとエクスポートで分かりやすいラベルを表示
@@ -86,7 +85,6 @@
 
 ## 変更履歴
 
-- **v1.0.5**: 統計パネルにモデル別キャッシュヒット率（業界標準の式 A：cacheRead / (cacheRead + cacheWrite + input)）を追加。モデル棒グラフの副注釈と専用テーブルで表示し、by-model CSV/Excel エクスポートにも列を追加。
 - **v1.0.4**：パネルの日付表示形式をカスタマイズ可能に（auto / ISO / YMD / DMY / MDY、設定パネルで切替）。
 - **v1.0.3**：`@description` で統計パネル（dashboard & export）を強調、英語優先の表記に。
 - **v1.0.2**：`@description` を簡潔な英語1行に、中文は Greasy Fork ローカライズブロックへ移動。
