@@ -45,7 +45,7 @@ const exp0 = denom0 ? (m0.cacheReadTokens ?? 0) / denom0 : 0
 check("byModel[0].cacheHitRate 与公式一致", Math.abs(m0.cacheHitRate - exp0) < 1e-12)
 
 // (3) 导出按模型数据含 cacheHitRate 列/字段（与 doExport/exportXLSX 构造一致）
-const byModelRows = api.mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: api.cacheHitRate(r) }))
+const byModelRows = api.mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: api.cacheHitRate(r) * 100 }))
 check("导出按模型对象含 cacheHitRate 字段", byModelRows.every((r) => "cacheHitRate" in r))
 const csv = api.toCSV(byModelRows, [...api.AGG_COLS, "cacheHitRate"])
 check("CSV 表头含 cacheHitRate 列", csv.split("\n")[0].split(",").includes("cacheHitRate"))

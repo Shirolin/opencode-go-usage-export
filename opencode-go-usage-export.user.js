@@ -223,6 +223,9 @@
       dimByModel: "Model · {0}",
       dimByKey: "API key · {0}",
       dimByPlan: "Plan · {0}",
+      statCacheHitTitle: "Cache hit rate (by model)",
+      colModel: "Model",
+      colHitRate: "Hit rate",
       unitTok: " tok",
       unitReqs: " req",
       unitReqsPlain: "req",
@@ -324,6 +327,9 @@
       dimByModel: "モデル別 · {0}",
       dimByKey: "APIキー別 · {0}",
       dimByPlan: "プラン別 · {0}",
+      statCacheHitTitle: "キャッシュヒット率（モデル別）",
+      colModel: "モデル",
+      colHitRate: "ヒット率",
       unitTok: " tok",
       unitReqs: " 回",
       unitReqsPlain: "回",
@@ -425,6 +431,9 @@
       dimByModel: "依模型 · {0}",
       dimByKey: "依 API Key · {0}",
       dimByPlan: "依方案 · {0}",
+      statCacheHitTitle: "快取命中率（依模型）",
+      colModel: "模型",
+      colHitRate: "命中率",
       unitTok: " tok",
       unitReqs: " 次",
       unitReqsPlain: "次",
@@ -1426,7 +1435,7 @@
     }
     const raw = rawRows(detail, keyNames)
     add("raw", raw, Object.keys(raw[0] || {}))
-    const byModelX = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: cacheHitRate(r) }))
+    const byModelX = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: cacheHitRate(r) * 100 }))
     add("by-model", byModelX, [...AGG_COLS, "cacheHitRate"])
     add("by-date", mergedAggs(detail, summary, (s) => s.date, dateKey), AGG_COLS)
     add("by-key", mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), AGG_COLS)
@@ -1501,7 +1510,7 @@
     } else {
       const raw = rawRows(detail, keyNames)
       download(`go-usage-raw${tag}-${ts}.csv`, toCSV(raw, Object.keys(raw[0] || {})))
-      const byModelCsv = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: cacheHitRate(r) }))
+      const byModelCsv = mergedAggs(detail, summary, (s) => s.model, (r) => r.model).map((r) => ({ ...r, cacheHitRate: cacheHitRate(r) * 100 }))
       download(`go-usage-by-model${tag}-${ts}.csv`, toCSV(byModelCsv, [...AGG_COLS, "cacheHitRate"]))
       download(`go-usage-by-date${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => s.date, dateKey), AGG_COLS))
       download(`go-usage-by-key${tag}-${ts}.csv`, toCSV(mergedAggs(detail, summary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), AGG_COLS))
@@ -1742,7 +1751,7 @@
       const maxCost = byModel[0].costUSD
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByModel", byModel.length)}</summary>
-        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + (m.cacheHitRate != null ? ` · ${(m.cacheHitRate * 100).toFixed(1)}%` : ""))).join("")}</div>
+        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + " · " + (m.cacheHitRate * 100).toFixed(1) + "%")).join("")}</div>
       </details>`)
     }
     if (byKey.length) {
@@ -1763,7 +1772,7 @@
 
     if (byModel.length) {
       const hitRows = byModel
-        .map((m) => `<tr><td>${escHtml(m.key)}</td><td>${m.cacheHitRate != null ? (m.cacheHitRate * 100).toFixed(1) + "%" : "-"}</td></tr>`)
+        .map((m) => `<tr><td>${escHtml(m.key)}</td><td>${(m.cacheHitRate * 100).toFixed(1)}%</td></tr>`)
         .join("")
       dimFolds.push(`<details class="oc-fold"${dimOpen}>
         <summary>${t("statCacheHitTitle", byModel.length)}</summary>
@@ -1974,6 +1983,11 @@
 .oc-quota-fill{height:100%;background:#4caf82;border-radius:99px;transition:width .25s}
 .oc-quota-fill.oc-quota-mid{background:#e6a817}
 .oc-quota-fill.oc-quota-warn{background:#e84c3d}
+.oc-cache-hit-table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:2px}
+.oc-cache-hit-table th,.oc-cache-hit-table td{padding:5px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+.oc-cache-hit-table th{color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:9.5px}
+.oc-cache-hit-table td:last-child{text-align:right;font-variant-numeric:tabular-nums;color:#bbb}
+.oc-cache-hit-table tr:hover td{background:rgba(255,255,255,.03)}
 .oc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
 .oc-stat{background:rgba(255,255,255,.04);padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06)}
 .oc-stat-k{font-size:10px;color:#666;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
