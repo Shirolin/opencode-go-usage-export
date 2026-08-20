@@ -66,6 +66,8 @@ Tampermonkey 使用者腳本：匯出 [OpenCode 控制台](https://opencode.ai) 
 - **自動同步**：>6h 自動增量
 - **預設匯出期間**：近 7 天 / 近 30 天 / 全部
 - **預設展開區塊**：概覽、維度分析、匯出
+- **日期顯示格式**：跟隨瀏覽器語言（auto）/ ISO（YYYY-MM-DD）/ YMD（YYYY/MM/DD）/ DMY（DD/MM/YYYY）/ MDY（MM/DD/YYYY）
+
 - **進階**：拉頁間隔（250/350/500ms）、模型/key 排行數量
 
 ## 資料儲存

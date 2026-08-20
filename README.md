@@ -66,6 +66,8 @@ Stored in `localStorage` (`oc-go-export-settings-v1`):
 - **Auto-sync**: incremental sync after >6 h
 - **Default export range**: last 7 days / last 30 days / all
 - **Panel sections open by default**: overview, breakdowns, export
+- **Date display format**: auto (follow browser locale) / ISO (YYYY-MM-DD) / YMD (YYYY/MM/DD) / DMY (DD/MM/YYYY) / MDY (MM/DD/YYYY)
+
 - **Advanced**: paging interval (250/350/500 ms), top-N model/key counts
 
 ## Data storage

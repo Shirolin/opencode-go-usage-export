@@ -66,6 +66,8 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 - **自动同步**：>6h 自动增量
 - **导出默认日期**：近7天 / 近30天 / 全部
 - **面板默认展开**：概览、维度分析、导出区
+- **日期显示格式**：跟随浏览器语言（auto）/ ISO（YYYY-MM-DD）/ YMD（YYYY/MM/DD）/ DMY（DD/MM/YYYY）/ MDY（MM/DD/YYYY）
+
 - **高级**：拉页间隔（250/350/500ms）、模型/key 排行数量
 
 ## 数据存储
