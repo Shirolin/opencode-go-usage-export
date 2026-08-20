@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.5-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usage 页的 Go 订阅用量统计，含 token 细分（cache read / reasoning）、按模型 / API key / plan / 日期聚合，支持 CSV + Excel 导出。
 
@@ -16,6 +16,7 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 - **可中断抓取**：「停止」按钮 / 超时立即中止抓取并保存已抓数据；全量抓取有页数上限（2000 页）兜底
 - **自动同步**：打开页面距上次同步超过 6 小时自动增量（不下载文件），可在设置中开关
 - **页面内统计面板**：总量、近 30 天成本、Go 限额对比（5h/$12 · 7d/$30 · 30d/$60）、按模型 / key / plan 条形图
+- **按模型缓存命中率**：按模型的缓存读取命中率（cacheRead / (cacheRead + cacheWrite + input)），在模型条形图副标注命中率%，并单列缓存命中率表格；按模型 CSV/Excel 导出也包含该列。
 - **大窗口模式**：居中弹窗（720px），更适合浏览统计和维度分析
 - **设置面板**：显示模式、自动同步、导出默认值、面板折叠、拉页间隔、排行数量等
 - **API key 名称**：手动更新 key 名称，面板和导出中显示友好标签
@@ -85,6 +86,7 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 
 ## 版本历史
 
+- **v1.0.5**：统计面板新增「按模型缓存命中率」（业内口径 A：cacheRead / (cacheRead + cacheWrite + input)），模型条形图副标注命中率% 并单列命中率表格，按模型 CSV/Excel 导出同步包含该列。
 - **v1.0.4**：面板日期显示格式支持自定义（auto / ISO / YMD / DMY / MDY），可在设置面板切换。
 - **v1.0.3**：`@description` 突出统计面板（dashboard & export），改为英文优先表述。
 - **v1.0.2**：`@description` 精简为英文单行，中文内容移交 Greasy Fork 本地化块。
