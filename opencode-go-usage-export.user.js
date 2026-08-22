@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go Usage Export
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.6
+// @version      1.0.7
 // @author       Shirolin
 // @run-at       document-start
 // @description  OpenCode Go usage dashboard & export — in-page stats panel (totals, cost, Go quota 5h/7d/30d, breakdowns by model / API key / plan), network-layer capture, 30-day detail + permanent aggregates in IndexedDB, incremental sync, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
@@ -1608,12 +1608,17 @@
       cacheReadTokens: sumF(viewDetail, "cacheReadTokens") + sumF(viewSummary, "cacheReadTokens"),
       outputTokens: sumF(viewDetail, "outputTokens") + sumF(viewSummary, "outputTokens"),
     }
-    const topByCost = (arr, n) => [...arr].sort((a, b) => b.costUSD - a.costUSD).slice(0, n)
-    const byModel = topByCost(mergedAggs(viewDetail, viewSummary, (s) => s.model, (r) => r.model), settings.topModelCount)
+    // 排序以 token 总量为主导（免费模型 cost=$0 也能进榜），同量级再按费用细分
+    const tokOf = (a) => a.inputTokens + a.cacheReadTokens + a.outputTokens
+    const topN = (arr, n) =>
+      [...arr]
+        .sort((a, b) => tokOf(b) - tokOf(a) || b.costUSD - a.costUSD)
+        .slice(0, n)
+    const byModel = topN(mergedAggs(viewDetail, viewSummary, (s) => s.model, (r) => r.model), settings.topModelCount)
     for (const m of byModel) m.cacheHitRate = cacheHitRate(m)
 
-    const byKey = topByCost(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
-    const byPlan = mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go")
+    const byKey = topN(mergedAggs(viewDetail, viewSummary, (s) => keyLabel(s.keyID, s.plan, keyNames), (r) => keyLabel(r.keyID, r.plan, keyNames)), settings.topKeyCount)
+    const byPlan = topN(mergedAggs(viewDetail, viewSummary, (s) => s.plan || "pay-as-you-go", (r) => r.plan || "pay-as-you-go"), Infinity)
 
     // 极值：仅统计带真实时间戳的行（跳过 null，避免 0 时间戳污染为 1970-01-01）
     let minTC = null
@@ -1720,15 +1725,15 @@
     const fmtD = fmtDate
     const windowText = winStart != null ? `${fmtD(winStart)} ~ ${fmtD(now)}（${winLabel}）` : winLabel
 
-    // bar 统一以费用为主指标排序和宽度，secondary 为右侧标注文字
-    const barRow = (label, cost, maxCost, secondary = "") =>
+    // bar 以 token 总量为主指标（宽度 = token 占比），右侧标注文字由调用方传入
+    const barRow = (label, tok, maxTok, secondary = "") =>
       `<div class="oc-bar-row">
         <div class="oc-bar-meta">
           <span class="oc-bar-label" title="${escHtml(label)}">${escHtml(label)}</span>
-          <span class="oc-bar-cost">${cost != null ? "$" + cost.toFixed(2) : ""}</span>
+          <span class="oc-bar-cost">${tok != null ? fmtT(tok) + t("unitTok") : ""}</span>
         </div>
         <div class="oc-bar-body">
-          <div class="oc-bar-track"><div class="oc-bar-fill" style="width:${maxCost ? Math.max(4, (cost / maxCost) * 100) : 0}%"></div></div>
+          <div class="oc-bar-track"><div class="oc-bar-fill" style="width:${maxTok ? Math.max(4, (tok / maxTok) * 100) : 0}%"></div></div>
           <span class="oc-bar-val">${secondary}</span>
         </div>
       </div>`
@@ -1741,30 +1746,28 @@
         <div class="oc-quota-track"><div class="oc-quota-fill ${cls}" style="width:${Math.max(2, pct)}%"></div></div>
       </div>`
     }
-
     const dimFolds = []
     const dimOpen = settings.dimensionsOpen ? " open" : ""
-    // 三个维度统一按费用降序，bar 宽度 = 费用占比
+    // 三个维度统一按 token 总量降序（免费模型 cost=$0 也可比），bar 宽度 = token 占比，右侧标注费用
     if (byModel.length) {
-      const maxCost = byModel[0].costUSD
+      const maxTok = tokOf(byModel[0])
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByModel", byModel.length)}</summary>
-        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + " · " + (m.cacheHitRate * 100).toFixed(1) + "%")).join("")}</div>
+        <div class="oc-fold-body">${byModel.map((m) => barRow(m.key, tokOf(m), maxTok, (m.cacheHitRate * 100).toFixed(1) + "% · $" + m.costUSD.toFixed(2))).join("")}</div>
       </details>`)
     }
     if (byKey.length) {
-      const maxCost = byKey[0].costUSD
+      const maxTok = tokOf(byKey[0])
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
         <summary>${t("dimByKey", byKey.length)}</summary>
-        <div class="oc-fold-body">${byKey.map((m) => barRow(m.key, m.costUSD, maxCost, m.requests.toLocaleString() + t("unitReqs"))).join("")}</div>
+        <div class="oc-fold-body">${byKey.map((m) => barRow(m.key, tokOf(m), maxTok, m.requests.toLocaleString() + t("unitReqs") + " · $" + m.costUSD.toFixed(2))).join("")}</div>
       </details>`)
     }
     if (byPlan.length) {
-      const planSorted = [...byPlan].sort((a, b) => b.costUSD - a.costUSD)
-      const maxCost = planSorted[0].costUSD
+      const maxTok = tokOf(byPlan[0])
       dimFolds.push(`<details class="oc-fold oc-dim-fold"${dimOpen}>
-        <summary>${t("dimByPlan", planSorted.length)}</summary>
-        <div class="oc-fold-body">${planSorted.map((m) => barRow(m.key, m.costUSD, maxCost, fmtT(m.inputTokens + m.cacheReadTokens + m.outputTokens) + t("unitTok") + " · " + m.requests.toLocaleString() + t("unitReqs"))).join("")}</div>
+        <summary>${t("dimByPlan", byPlan.length)}</summary>
+        <div class="oc-fold-body">${byPlan.map((m) => barRow(m.key, tokOf(m), maxTok, m.requests.toLocaleString() + t("unitReqs") + " · $" + m.costUSD.toFixed(2))).join("")}</div>
       </details>`)
     }
 
