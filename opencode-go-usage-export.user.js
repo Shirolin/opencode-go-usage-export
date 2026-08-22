@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go Usage Export
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.7
+// @version      1.0.8
 // @author       Shirolin
 // @run-at       document-start
 // @description  OpenCode Go usage dashboard & export — in-page stats panel (totals, cost, Go quota 5h/7d/30d, breakdowns by model / API key / plan), network-layer capture, 30-day detail + permanent aggregates in IndexedDB, incremental sync, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
@@ -1557,6 +1557,9 @@
   const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 
   // 面板统计的纯数值计算（renderPanel 消费）：单遍成本窗口、循环极值，避免多趟 filter/spread
+  // token 总量：排行排序与条形宽度的主指标（免费模型 cost=$0 也可比）
+  const tokOf = (a) => a.inputTokens + a.cacheReadTokens + a.outputTokens
+
   function computePanelStats(detail, summary, keyNames, settings, now) {
     const sumF = (list, f) => list.reduce((a, r) => a + (r[f] ?? 0), 0)
     const sumCost = (list) => list.reduce((a, r) => a + (r.costUSD ?? 0), 0)
@@ -1609,7 +1612,6 @@
       outputTokens: sumF(viewDetail, "outputTokens") + sumF(viewSummary, "outputTokens"),
     }
     // 排序以 token 总量为主导（免费模型 cost=$0 也能进榜），同量级再按费用细分
-    const tokOf = (a) => a.inputTokens + a.cacheReadTokens + a.outputTokens
     const topN = (arr, n) =>
       [...arr]
         .sort((a, b) => tokOf(b) - tokOf(a) || b.costUSD - a.costUSD)
