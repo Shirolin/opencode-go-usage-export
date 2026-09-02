@@ -1323,7 +1323,7 @@
       a.outputTokens += ot
       a.reasoningTokens += r.reasoningTokens ?? 0
       a.costUSD += r.costUSD ?? 0
-      a._t += it + cr + ot
+      a._t += it + cr + cw + ot
     }
     const arr = [...map.values()]
     arr.sort((a, b) => b._t - a._t)
@@ -1342,15 +1342,16 @@
       }
       const it = s.inputTokens ?? 0
       const cr = s.cacheReadTokens ?? 0
+      const cw = s.cacheWriteTokens ?? 0
       const ot = s.outputTokens ?? 0
       a.requests += s.requests ?? 0
       a.inputTokens += it
       a.cacheReadTokens += cr
-      a.cacheWriteTokens += s.cacheWriteTokens ?? 0
+      a.cacheWriteTokens += cw
       a.outputTokens += ot
       a.reasoningTokens += s.reasoningTokens ?? 0
       a.costUSD += s.costUSD ?? 0
-      a._t += it + cr + ot
+      a._t += it + cr + cw + ot
     }
     const arr = [...map.values()]
     arr.sort((a, b) => b._t - a._t)
@@ -1361,17 +1362,16 @@
     const m = new Map()
     const totals = new Map()
     for (const x of a) {
-      m.set(x.key, x)
-      totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.outputTokens)
+      totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.cacheWriteTokens + x.outputTokens)
     }
     for (const x of b) {
       const cur = m.get(x.key)
       if (cur) {
         for (const f of AGG_FIELDS) cur[f] += x[f] ?? 0
-        totals.set(x.key, totals.get(x.key) + x.inputTokens + x.cacheReadTokens + x.outputTokens)
+        totals.set(x.key, totals.get(x.key) + x.inputTokens + x.cacheReadTokens + x.cacheWriteTokens + x.outputTokens)
       } else {
         m.set(x.key, { ...x })
-        totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.outputTokens)
+        totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.cacheWriteTokens + x.outputTokens)
       }
     }
     const arr = [...m.values()]
@@ -1557,8 +1557,8 @@
   const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 
   // 面板统计的纯数值计算（renderPanel 消费）：单遍成本窗口、循环极值，避免多趟 filter/spread
-  // token 总量：排行排序与条形宽度的主指标（免费模型 cost=$0 也可比）
-  const tokOf = (a) => a.inputTokens + a.cacheReadTokens + a.outputTokens
+  // token 总量：排行排序与条形宽度的主指标（免费模型 cost=$0 也可比）—— 含 cacheWrite，避免写缓存大户被低估
+  const tokOf = (a) => a.inputTokens + a.cacheReadTokens + a.cacheWriteTokens + a.outputTokens
 
   function computePanelStats(detail, summary, keyNames, settings, now) {
     const sumF = (list, f) => list.reduce((a, r) => a + (r[f] ?? 0), 0)
@@ -1609,6 +1609,7 @@
       requests: viewDetail.length + sumF(viewSummary, "requests"),
       inputTokens: sumF(viewDetail, "inputTokens") + sumF(viewSummary, "inputTokens"),
       cacheReadTokens: sumF(viewDetail, "cacheReadTokens") + sumF(viewSummary, "cacheReadTokens"),
+      cacheWriteTokens: sumF(viewDetail, "cacheWriteTokens") + sumF(viewSummary, "cacheWriteTokens"),
       outputTokens: sumF(viewDetail, "outputTokens") + sumF(viewSummary, "outputTokens"),
     }
     // 排序以 token 总量为主导（免费模型 cost=$0 也能进榜），同量级再按费用细分
@@ -1801,10 +1802,10 @@
           <div class="oc-panel-head">
             <span class="oc-stat-total">${t("statTotalRequests", total.requests.toLocaleString())}</span>
             <span class="oc-stat-cost-pill">$${viewCost.toFixed(2)}</span>
-          </div>
           <div class="oc-stat-grid">
             <div class="oc-stat"><div class="oc-stat-k">Input</div><div class="oc-stat-v">${fmtT(total.inputTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">Cache</div><div class="oc-stat-v">${fmtT(total.cacheReadTokens)}</div></div>
+            <div class="oc-stat"><div class="oc-stat-k">Cache Write</div><div class="oc-stat-v">${fmtT(total.cacheWriteTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">Output</div><div class="oc-stat-v">${fmtT(total.outputTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">5h / 7d</div><div class="oc-stat-v oc-stat-v-sm">$${cost5h.toFixed(2)} / $${cost7d.toFixed(2)}</div></div>
           </div>
@@ -1992,6 +1993,7 @@
 .oc-cache-hit-table td:last-child{text-align:right;font-variant-numeric:tabular-nums;color:#bbb}
 .oc-cache-hit-table tr:hover td{background:rgba(255,255,255,.03)}
 .oc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.oc-stat-grid .oc-stat:last-child:nth-child(odd){grid-column:1/-1}
 .oc-stat{background:rgba(255,255,255,.04);padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06)}
 .oc-stat-k{font-size:10px;color:#666;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
 .oc-stat-v{font-size:14px;color:#f0f0f0;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
