@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Go Usage Export
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.8
+// @version      1.0.9
 // @author       Shirolin
 // @run-at       document-start
 // @description  OpenCode Go usage dashboard & export — in-page stats panel (totals, cost, Go quota 5h/7d/30d, breakdowns by model / API key / plan), network-layer capture, 30-day detail + permanent aggregates in IndexedDB, incremental sync, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
