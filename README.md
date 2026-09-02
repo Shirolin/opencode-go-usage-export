@@ -2,7 +2,7 @@
 
 # OpenCode Go Usage Export
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.11-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 A Tampermonkey userscript that exports Go subscription usage statistics from the [OpenCode console](https://opencode.ai) Usage page — token breakdown (cache read / reasoning), aggregated by model / API key / plan / date, with CSV + Excel export.
 
@@ -85,6 +85,15 @@ Stored in `localStorage` (`oc-go-export-settings-v1`):
 
 ## Changelog
 
+- **v1.0.11**:
+  - Fix layout breakage and squished cards caused by an unclosed `div` in the overview section; add structural regression tests.
+  - Add official favicon (`@icon`, `@icon64`) and localized metadata (`@name:zh-CN`, etc.) for userscript managers.
+- **v1.0.10**: Fix aggregation (`mergedAggs`) missing summary rows when merging dimensions.
+- **v1.0.9**: Incorporate `cacheWriteTokens` into totals, rankings, and UI cards with full-width odd grid support.
+- **v1.0.8**: Fix `tokOf` cross-function reference scope error causing `renderPanel` crashes.
+- **v1.0.7**: Fix $0 free models missing from rankings; rank primarily by token volume.
+- **v1.0.6**: Switch update source back to GreasyFork for reliable script updates.
+- **v1.0.5**: Add model-level cache hit rate statistics (standard formula: `cacheRead / (cacheRead + cacheWrite + input)`).
 - **v1.0.4**: panel date display format is now configurable (auto / ISO / YMD / DMY / MDY) via the settings panel.
 - **v1.0.3**: `@description` now highlights the stats dashboard & export; English-first wording.
 - **v1.0.2**: `@description` trimmed to a concise English single line; Chinese text moved to the Greasy Fork localization block.

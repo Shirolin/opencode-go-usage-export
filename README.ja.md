@@ -2,7 +2,7 @@
 
 # OpenCode Go 利用状況エクスポート
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.11-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 [OpenCode コンソール](https://opencode.ai) の Usage ページから Go サブスクリプションの利用統計をエクスポートする Tampermonkey ユーザースクリプトです。token の内訳（cache read / reasoning）や、モデル / API キー / プラン / 日付ごとの集計に対応し、CSV + Excel エクスポートが可能です。
 
@@ -85,6 +85,15 @@
 
 ## 変更履歴
 
+- **v1.0.11**：
+  - 概要パネルの未閉じタグによるレイアウト崩れおよびカードの圧迫表示を修正し、DOM 構造の回帰防止テストを追加。
+  - 公式 Favicon（`@icon`、`@icon64`）および多言語メタデータ（`@name:ja` など）を追加し、ユーザースクリプト管理画面での表示を最適化。
+- **v1.0.10**：集計（`mergedAggs`）において複数次元をマージする際に過去の集約（summary）行が欠落する問題を修正。
+- **v1.0.9**：`cacheWriteTokens` を全体集計・ランキング・UI表示に統合（Cache Write カードの追加、奇数要素の全幅グリッド表示に対応）。
+- **v1.0.8**：関数間での `tokOf` 参照によるパネル描画（`renderPanel`）クラッシュの問題を修正。
+- **v1.0.7**：無料モデル（$0）がモデルランキングに表示されない問題を修正し、Token 総量を主指標に変更。
+- **v1.0.6**：スクリプトの更新元を GreasyFork に戻し、特定ネットワーク環境での更新チェックを改善。
+- **v1.0.5**：モデル別のキャッシュヒット率統計（標準計算式：`cacheRead / (cacheRead + cacheWrite + input)`）を追加。
 - **v1.0.4**：パネルの日付表示形式をカスタマイズ可能に（auto / ISO / YMD / DMY / MDY、設定パネルで切替）。
 - **v1.0.3**：`@description` で統計パネル（dashboard & export）を強調、英語優先の表記に。
 - **v1.0.2**：`@description` を簡潔な英語1行に、中文は Greasy Fork ローカライズブロックへ移動。

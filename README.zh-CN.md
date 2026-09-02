@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
-![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.4-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
+![License](https://img.shields.io/github/license/Shirolin/opencode-go-usage-export) ![Version](https://img.shields.io/badge/version-1.0.11-3fb950.svg) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485b.svg)
 
 Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usage 页的 Go 订阅用量统计，含 token 细分（cache read / reasoning）、按模型 / API key / plan / 日期聚合，支持 CSV + Excel 导出。
 
@@ -85,6 +85,15 @@ Tampermonkey 用户脚本：导出 [OpenCode 控制台](https://opencode.ai) Usa
 
 ## 版本历史
 
+- **v1.0.11**：
+  - 修复概览面板中标签未闭合导致的布局破坏与卡片挤压错位问题，补齐结构防回归测试；
+  - 补充官方 Favicon 图标（`@icon`、`@icon64`）与多语言名称/描述（`@name:zh-CN` 等），优化油猴管理面板显示。
+- **v1.0.10**：修复聚合统计（`mergedAggs`）中多维度合并时遗漏历史汇总（summary）行数据的问题。
+- **v1.0.9**：补齐 `cacheWriteTokens` 纳入全量统计、维度排行与数据展示；面板新增 Cache Write 统计格并适配奇数通栏展示，避免高写缓存模型排行偏低。
+- **v1.0.8**：修复跨函数引用 `tokOf` 导致面板渲染（`renderPanel`）崩溃的作用域断裂问题。
+- **v1.0.7**：修复免费模型（$0）在模型排行中未正确展示的问题，排行榜主导指标改为 Token 总量（同量级再按费用细分）。
+- **v1.0.6**：更新源交还 GreasyFork，修复国内网络环境下无法检测与拉取新版本的问题。
+- **v1.0.5**：新增按模型缓存命中率统计（业内口径 A：`cacheRead / (cacheRead + cacheWrite + input)`），并在面板与导出中展示命中率表格。
 - **v1.0.4**：面板日期显示格式支持自定义（auto / ISO / YMD / DMY / MDY），可在设置面板切换。
 - **v1.0.3**：`@description` 突出统计面板（dashboard & export），改为英文优先表述。
 - **v1.0.2**：`@description` 精简为英文单行，中文内容移交 Greasy Fork 本地化块。
