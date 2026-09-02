@@ -1362,6 +1362,7 @@
     const m = new Map()
     const totals = new Map()
     for (const x of a) {
+      m.set(x.key, x)
       totals.set(x.key, x.inputTokens + x.cacheReadTokens + x.cacheWriteTokens + x.outputTokens)
     }
     for (const x of b) {
