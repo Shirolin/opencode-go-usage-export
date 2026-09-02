@@ -1,12 +1,22 @@
 // ==UserScript==
 // @name         OpenCode Go Usage Export
+// @name:zh-CN   OpenCode Go 用量导出
+// @name:zh      OpenCode Go 用量导出
+// @name:zh-TW   OpenCode Go 用量匯出
+// @name:ja      OpenCode Go 使用量エクスポート
 // @namespace    https://github.com/Shirolin/opencode-go-usage-export
-// @version      1.0.10
+// @version      1.0.11
 // @author       Shirolin
 // @run-at       document-start
 // @description  OpenCode Go usage dashboard & export — in-page stats panel (totals, cost, Go quota 5h/7d/30d, breakdowns by model / API key / plan), network-layer capture, 30-day detail + permanent aggregates in IndexedDB, incremental sync, CSV + Excel export. ⚠ Install only from the official GitHub repository (github.com/Shirolin/opencode-go-usage-export); modified copies from unknown sources may steal your API keys.
+// @description:zh-CN OpenCode Go 用量看板与导出 — 页面内统计面板（总计、费用、Go 5h/7d/30d 配额、模型/API Key/方案分析）、网络层拦截抓取、IndexedDB 存储、增量同步、CSV/Excel 导出。⚠ 仅从 GitHub 官方仓库安装 (github.com/Shirolin/opencode-go-usage-export)，来源不明的修改版可能窃取您的 API Key。
+// @description:zh    OpenCode Go 用量看板与导出 — 页面内统计面板（总计、费用、Go 5h/7d/30d 配额、模型/API Key/方案分析）、网络层拦截抓取、IndexedDB 存储、增量同步、CSV/Excel 导出。⚠ 仅从 GitHub 官方仓库安装 (github.com/Shirolin/opencode-go-usage-export)，来源不明的修改版可能窃取您的 API Key。
+// @description:zh-TW OpenCode Go 用量看板與匯出 — 頁面內統計面板（總計、費用、Go 5h/7d/30d 配額、模型/API Key/方案分析）、網路層攔截抓取、IndexedDB 儲存、增量同步、CSV/Excel 匯出。⚠ 僅從 GitHub 官方儲存庫安裝 (github.com/Shirolin/opencode-go-usage-export)，來源不明的修改版可能竊取您的 API Key。
+// @description:ja    OpenCode Go 利用量ダッシュボードとエクスポート — ページ内統計パネル、ネットワーク層キャプチャ、IndexedDB 保存、増分同期、CSV/Excel エクスポート。
 // @match        https://opencode.ai/workspace/*/usage
 // @match        https://opencode.ai/*/workspace/*/usage
+// @icon         https://opencode.ai/favicon.ico
+// @icon64       https://opencode.ai/favicon.ico
 // @require      https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
 // @license      GPL-3.0-or-later
 // @homepageURL  https://github.com/Shirolin/opencode-go-usage-export
@@ -1803,6 +1813,7 @@
           <div class="oc-panel-head">
             <span class="oc-stat-total">${t("statTotalRequests", total.requests.toLocaleString())}</span>
             <span class="oc-stat-cost-pill">$${viewCost.toFixed(2)}</span>
+          </div>
           <div class="oc-stat-grid">
             <div class="oc-stat"><div class="oc-stat-k">Input</div><div class="oc-stat-v">${fmtT(total.inputTokens)}</div></div>
             <div class="oc-stat"><div class="oc-stat-k">Cache</div><div class="oc-stat-v">${fmtT(total.cacheReadTokens)}</div></div>

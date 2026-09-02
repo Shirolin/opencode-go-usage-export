@@ -11,7 +11,7 @@ try {
   JSDOM = null
 }
 if (!JSDOM) {
-  console.log("SKIP  jsdom 未安装，仅做静态作用域检查")
+  console.log("SKIP  jsdom 未安装，仅做静态作用域与结构检查")
   // 静态兜底：tokOf 必须定义在使用它的两个函数的共同可见作用域（模块顶层）
   const src = fs.readFileSync(path.join(__dirname, "..", "opencode-go-usage-export.user.js"), "utf8")
   const def = src.indexOf("const tokOf")
@@ -19,7 +19,13 @@ if (!JSDOM) {
   const panelFn = src.indexOf("function renderPanel")
   const okScope = def < statsFn && def < panelFn
   console.log(`${okScope ? "PASS" : "FAIL"}  tokOf 定义于 computePanelStats/renderPanel 之前的模块级作用域`)
-  process.exit(okScope ? 0 : 1)
+
+  // 静态检查：renderPanel 中 oc-panel-head 必须独立闭合 </div>，且不包含 oc-stat-grid
+  const headMatch = /<div class="oc-panel-head">[\s\S]*?<\/div>/.exec(src)
+  const okHeadClosed = headMatch !== null && !headMatch[0].includes('class="oc-stat-grid"')
+  console.log(`${okHeadClosed ? "PASS" : "FAIL"}  renderPanel 中 oc-panel-head 独立闭合且未误吞 oc-stat-grid`)
+
+  process.exit(okScope && okHeadClosed ? 0 : 1)
 }
 
 const { loadApi } = require("./lib")
